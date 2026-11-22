@@ -29,6 +29,8 @@ export async function runRetention(
   const auditLogs = await prisma.auditLog.deleteMany({ where: { at: { lt: auditCutoff } } });
   const sessions = await prisma.session.deleteMany({ where: { expiresAt: { lt: now } } });
   const magicLinks = await prisma.magicLink.deleteMany({ where: { expiresAt: { lt: now } } });
+  const otps = await prisma.otpChallenge.deleteMany({ where: { expiresAt: { lt: now } } });
+  const consumerSessions = await prisma.consumerSession.deleteMany({ where: { expiresAt: { lt: now } } });
 
-  return { cutoff, outcomes, lookups: lookups.count, auditLogs: auditLogs.count, sessions: sessions.count, magicLinks: magicLinks.count };
+  return { cutoff, outcomes, lookups: lookups.count, auditLogs: auditLogs.count, sessions: sessions.count, magicLinks: magicLinks.count, otps: otps.count, consumerSessions: consumerSessions.count };
 }

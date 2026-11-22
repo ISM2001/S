@@ -12,7 +12,7 @@ const TOTAL = Number(process.argv[2] ?? 3000);
 const CONCURRENCY = Number(process.argv[3] ?? 20);
 const env = loadEnv({ ...process.env, RATE_LIMIT_PER_MIN: "100000000", LOG_LEVEL: "warn" });
 const redis = new Redis(env.REDIS_URL);
-const app = await buildApp({ prisma, redis, env, mailer: { send: async () => undefined } }, { logger: false });
+const app = await buildApp({ prisma, redis, env, mailer: { send: async () => undefined }, sms: { available: true, send: async () => undefined } }, { logger: false });
 await app.listen({ port: 0, host: "127.0.0.1" });
 const addr = app.server.address() as { port: number };
 const KEY = "tq_test_000000000000_demo_secret_do_not_use_in_production";

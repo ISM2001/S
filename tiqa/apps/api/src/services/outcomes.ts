@@ -72,6 +72,12 @@ export async function ingestOutcomes(
         "carrier" = COALESCE(EXCLUDED."carrier", "Outcome"."carrier"),
         "cityCode" = COALESCE(EXCLUDED."cityCode", "Outcome"."cityCode"),
         "occurredAt" = EXCLUDED."occurredAt",
+        -- Trust signals: a carrier-sourced record replacing a merchant-entered one for the same order.
+        "carrierChecked" = "Outcome"."carrierChecked"
+          OR ("Outcome"."source" = 'merchant_manual' AND EXCLUDED."source" <> 'merchant_manual'),
+        "contradicted" = "Outcome"."contradicted"
+          OR ("Outcome"."source" = 'merchant_manual' AND EXCLUDED."source" <> 'merchant_manual'
+              AND "Outcome"."outcome" IN ('refused','returned','unreachable') AND EXCLUDED."outcome" = 'delivered'),
         "updatedAt" = now()
       WHERE "Outcome"."status" = 'active'
       RETURNING (xmax = 0) AS inserted`;

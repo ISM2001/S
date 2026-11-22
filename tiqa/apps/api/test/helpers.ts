@@ -17,6 +17,7 @@ export interface TestCtx {
   redis: Redis;
   deps: Deps;
   mails: Mail[];
+  sms: Array<{ to: string; text: string }>;
 }
 
 /** Boots the real app against the test database + a dedicated Redis DB. Tables are truncated before each test. */
@@ -24,6 +25,7 @@ export function setupTestApp(envOverrides: Record<string, string> = {}): TestCtx
   const prisma = createPrisma(TEST_DATABASE_URL);
   const redis = new Redis(TEST_REDIS_URL, { maxRetriesPerRequest: 1 });
   const mails: Mail[] = [];
+  const sms: Array<{ to: string; text: string }> = [];
   const env = loadEnv({
     NODE_ENV: "test",
     DATABASE_URL: TEST_DATABASE_URL,
@@ -33,16 +35,20 @@ export function setupTestApp(envOverrides: Record<string, string> = {}): TestCtx
     RATE_LIMIT_PER_MIN: "1000",
     ...envOverrides,
   });
-  const deps: Deps = { prisma, redis, env, mailer: { send: async (m) => void mails.push(m) } };
-  const ctx = { prisma, redis, deps, mails } as TestCtx;
+  const deps: Deps = { prisma, redis, env, mailer: { send: async (m) => void mails.push(m) },
+    sms: { available: true, send: async (to, text) => void sms.push({ to, text }) },
+  };
+  const ctx = { prisma, redis, deps, mails, sms } as TestCtx;
 
   beforeEach(async () => {
     if (!ctx.app) ctx.app = await buildApp(deps, { logger: false });
     await prisma.$executeRawUnsafe(
-      `TRUNCATE "Outcome","Lookup","AuditLog","ApiKey","Session","MagicLink","Membership","User","UsageMonthly","Subscription","CsvImport","Merchant","Plan" RESTART IDENTITY CASCADE`,
+      `TRUNCATE "RequestItem","DataSubjectRequest","OtpChallenge","ConsumerSession","AnomalyFlag","Invite","Outcome","Lookup","AuditLog","ApiKey","Session","MagicLink","Membership","User","UsageMonthly","Subscription","CsvImport","Merchant","Plan" RESTART IDENTITY CASCADE`,
     );
     await redis.flushdb();
     mails.length = 0;
+    sms.length = 0;
+    ctx.app.network.clearTrustCache();
   });
   afterAll(async () => {
     await ctx.app?.close();
@@ -76,3 +82,19 @@ export function cookieFrom(setCookie: string | string[] | undefined): string {
 }
 
 export const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
+
+/** Make a user staff and return a session cookie for them. */
+export async function staffLogin(ctx: TestCtx, email = "staff@tiqa.test") {
+  const { cookie } = await signup(ctx, email, "Tiqa Staff Store");
+  await ctx.prisma.user.update({ where: { email }, data: { isStaff: true } });
+  return { cookie };
+}
+
+/** Run the consumer OTP flow for a phone and return the consumer cookie. */
+export async function consumerLogin(ctx: TestCtx, phone: string) {
+  await ctx.app.inject({ method: "POST", url: "/public/otp/request", payload: { phone } });
+  const code = /(\d{6})/.exec(ctx.sms.at(-1)!.text)![1]!;
+  const res = await ctx.app.inject({ method: "POST", url: "/public/otp/verify", payload: { phone, code } });
+  if (res.statusCode !== 200) throw new Error(`otp verify failed: ${res.body}`);
+  return { cookie: cookieFrom(res.headers["set-cookie"]) };
+}

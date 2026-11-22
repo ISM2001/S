@@ -34,6 +34,9 @@ model Merchant {
   trustWeight             Float          @default(1.0)
   /// Admin override; wins over trustWeight when set.
   trustOverride           Float?
+  trustComputedAt         DateTime?
+  /// Inputs of the last trust computation (for the admin panel).
+  trustDetails            Json?
   /// Cost of one failed COD delivery (shipping both ways, packaging, call), used for the "money saved" estimate.
   failedOrderCostCentimes Int            @default(4000)
   /// Merchant accepted the terms, incl. the duty to inform customers that order data is shared for delivery-risk prevention.
@@ -49,6 +52,8 @@ model Merchant {
   usage        UsageMonthly[]
   subscription Subscription?
   csvImports   CsvImport[]
+  invites      Invite[]
+  flags        AnomalyFlag[]
 }
 
 model User {
@@ -64,6 +69,22 @@ model User {
   memberships Membership[]
   sessions    Session[]
   magicLinks  MagicLink[]
+}
+
+model Invite {
+  id         String    @id @default(cuid())
+  merchantId String
+  email      String
+  role       Role      @default(member)
+  tokenHash  Bytes     @unique
+  invitedBy  String
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  merchant   Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
 }
 
 model Membership {
@@ -155,6 +176,10 @@ model Outcome {
   /// The merchant's own order reference, used for de-duplication and to update a status.
   merchantOrderRef String?
   status           RecordStatus  @default(active)
+  /// A carrier-sourced record later replaced this merchant-entered record for the same order.
+  carrierChecked   Boolean       @default(false)
+  /// ...and the carrier said "delivered" where the merchant had reported a refusal / unreachable.
+  contradicted     Boolean       @default(false)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   merchant         Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
@@ -279,4 +304,99 @@ model UsageMonthly {
   merchant          Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 
   @@id([merchantId, period])
+}
+
+// ── Consumer rights (Law 09-08: access, rectification/dispute, objection/deletion) ─
+
+model OtpChallenge {
+  id         String    @id @default(cuid())
+  phoneHash  Bytes
+  /// sha256(phoneHash || code): the code itself is never stored.
+  codeHash   Bytes
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phoneHash, createdAt])
+  @@index([expiresAt])
+}
+
+/// Short-lived session after OTP verification, scoped to ONE phone hash.
+model ConsumerSession {
+  tokenHash Bytes    @id
+  phoneHash Bytes
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+enum RequestType {
+  dispute
+  deletion
+}
+
+enum RequestStatus {
+  open
+  upheld
+  rejected
+}
+
+model DataSubjectRequest {
+  id             String        @id @default(cuid())
+  /// Nulled once a deletion request is carried out (we keep only the fact that it happened).
+  phoneHash      Bytes?
+  type           RequestType
+  status         RequestStatus @default(open)
+  /// Optional free text from the consumer (length-limited; we ask for no sensitive data).
+  message        String?
+  resolvedAt     DateTime?
+  resolvedBy     String?
+  resolutionNote String?
+  createdAt      DateTime      @default(now())
+  items          RequestItem[]
+
+  @@index([status, createdAt])
+  @@index([phoneHash])
+}
+
+/// Snapshot of each record covered by a request (kept so upheld disputes can count against the reporting merchant).
+model RequestItem {
+  id               String             @id @default(cuid())
+  requestId        String
+  outcomeId        String?
+  merchantId       String
+  outcome          OutcomeType
+  source           OutcomeSource
+  occurredAt       DateTime
+  merchantOrderRef String?
+  request          DataSubjectRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([merchantId])
+}
+
+// ── Anti-poisoning ───────────────────────────────────────────────────────────
+
+enum FlagStatus {
+  open
+  dismissed
+  actioned
+}
+
+model AnomalyFlag {
+  id         String     @id @default(cuid())
+  merchantId String
+  kind       String
+  severity   String
+  details    Json
+  status     FlagStatus @default(open)
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime   @default(now())
+  merchant   Merchant   @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId, kind, status])
+  @@index([status, createdAt])
 }

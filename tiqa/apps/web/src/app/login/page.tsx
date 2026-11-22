@@ -23,7 +23,9 @@ export default function LoginPage() {
     setError(null);
     try {
       await api("/app/auth/login", { body: { email, password } });
-      router.push("/dashboard");
+      // Tiqa staff accounts have no store: send them to the admin panel.
+      const isStoreUser = await api("/app/me").then(() => true, () => false);
+      router.push(isStoreUser ? "/dashboard" : "/admin");
     } catch (err) {
       setError(errMsg(err));
     } finally {
@@ -64,6 +66,9 @@ export default function LoginPage() {
       </form>
       <p className="mt-6 text-center text-sm text-slate-600">
         {t("noAccount")} <Link href="/signup" className="font-medium text-brand-700 hover:underline">{t("signup")}</Link>
+      </p>
+      <p className="mt-3 text-center text-xs text-slate-500">
+        <Link href="/consumer" className="hover:underline">{t("consumerLink")}</Link>
       </p>
     </AuthShell>
   );

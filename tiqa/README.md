@@ -3,7 +3,7 @@
 **Shared delivery-risk network for cash-on-delivery e-commerce in Morocco.**
 Sellers send an order's phone number and get back a risk band in milliseconds, based on delivery outcomes from every seller in the network ("give data to get data").
 
-> Status: **Phase 1 (MVP core)**: API, scoring, CSV import, basic dashboard (FR + AR/RTL).
+> Status: **Phase 2 done**: API, scoring, CSV import, dashboard (FR + AR/RTL), consumer rights portal, admin panel, trust weights & anomaly flags, team invites.
 > ⚖️ No real customer data before the CNDP filing, lawyer review of [`/legal`](legal/README.md) and the consumer rights portal (Phase 2).
 
 - Design, data model, scoring formula, decisions: [`docs/DESIGN.md`](docs/DESIGN.md)
@@ -22,11 +22,17 @@ docker compose up -d            # Postgres 16, Redis 7, Mailpit (test inbox)
 pnpm install
 pnpm db:deploy                  # create tables
 pnpm db:seed                    # fake demo data (fake numbers only)
-pnpm dev                        # API on :4000, dashboard on :3000
+pnpm dev                        # API + worker on :4000, dashboard on :3000
 ```
 
 Then open **http://localhost:3000** and sign in with **`demo@tiqa.test` / `demo-password-123`**
 (or use "Recevoir un lien de connexion": the email arrives in Mailpit at **http://localhost:8025**).
+
+| Who | Where | Login |
+|---|---|---|
+| Merchant (Demo Store, owner) | http://localhost:3000/dashboard | `demo@tiqa.test` / `demo-password-123` |
+| Tiqa staff (admin panel) | http://localhost:3000/admin | `admin@tiqa.test` / `admin-password-123` |
+| Consumer (rights portal) | http://localhost:3000/consumer | any fake number below; the SMS code is **printed in the API console** (`[sms:console]`) |
 
 Try these fake numbers in **Vérifier un numéro**:
 
@@ -35,6 +41,9 @@ Try these fake numbers in **Vérifier un numéro**:
 | `06 00 00 00 01` | **Risque élevé**: refusals at 3 other stores |
 | `06 00 00 00 02` | **Risque faible**: delivered at 4 stores |
 | `06 00 00 00 03` | **Données insuffisantes**: never seen |
+| `06 00 00 00 04` | **Données insuffisantes**: the person disputed everything, so the records are frozen (see the open request in the admin panel) |
+
+The seed also contains **Promo Flash**, a merchant whose carrier exports contradict its own refusals. The worker gives it trust 0.10 and a "CONTRADICTION_HIGH" alert in **/admin**.
 
 For CSV import, any spreadsheet with a phone column and a status column works (`Livré`, `Refusé`, `Retour`, `Injoignable`… in French, Arabic or Darija; `;` or `,` separators; Excel's Windows-1252 encoding is handled).
 
@@ -93,18 +102,31 @@ legal/           Placeholder legal docs: TO BE REVIEWED BY A MOROCCAN LAWYER
 | Bands, not a blacklist | API returns band + score + **ranges** of counts. No store identities |
 | Single store can't flag anyone | ≥ 2 distinct merchants required. Per-merchant cap (`packages/scoring`) |
 | Disputes freeze records | `Outcome.status = frozen` → excluded from scoring and never overwritten |
-| Audit log | Every lookup → `AuditLog` (merchant, hashed id, time, result) |
+| Audit log | Every lookup → `AuditLog` (merchant, hashed id, time, result). Consumer views/requests and admin actions too |
+| Data subject rights | `apps/api/src/routes/consumer.ts` + `services/requests.ts`, tested in `test/consumer.test.ts` |
+| Anti-poisoning | `packages/scoring/src/trust.ts` (pure) + `apps/api/src/jobs/trust.ts`, tested in `test/admin.test.ts` |
 | Logs | pino redaction of phone/password/CSV/auth headers (`apps/api/src/app.ts`) |
 
 ## Background worker
 
+`pnpm dev` runs it inside the API process. In production run it separately (exactly one instance):
+
 ```bash
-pnpm --filter @tiqa/api worker          # long-running: retention once a day
-pnpm --filter @tiqa/api job:retention   # one-off run
+pnpm --filter @tiqa/api worker          # retention daily + trust weights/anomaly flags hourly
+pnpm --filter @tiqa/api job:retention   # one-off runs
+pnpm --filter @tiqa/api job:trust
 ```
+
+## Consumer rights & admin (Phase 2)
+
+- **/consumer** (public): phone → 6-digit SMS code (10 min, 5 attempts, 3 SMS/hour per number) → summary of stored records (month, outcome, city, carrier; **never store names**) → dispute selected records or request deletion. Records are **frozen immediately** (excluded from scores, can't be overwritten by merchants).
+- **/admin** (staff only): review requests (uphold or reject), merchant trust (manual override, suspend), anomaly alerts (dismiss or mark handled), recompute trust.
+- **Team**: owners/admins invite colleagues by email (`/dashboard/team`). Roles: owner, admin, member.
+- **SMS**: no paid provider yet. Codes are printed to the console with a masked number. In production the portal answers "SMS unavailable" until a provider is configured.
 
 ## Roadmap
 
-- **Phase 2**: consumer rights portal (OTP → summary → dispute/delete), admin panel (disputes, trust weights, anomaly flags), trust-weight job, team invites.
+- ~~Phase 2~~ done.
+- **Before any real data**: lawyer review of `/legal`, CNDP filing, SMS provider, 2FA for staff accounts, hosting decision.
 - **Phase 3**: generic webhook, Shopify app stub, YouCan (after API research), carrier CSV templates.
 - **Phase 4**: billing (usage in MAD), payments (CMI etc., to evaluate), hardening (KMS, load tests, backups).

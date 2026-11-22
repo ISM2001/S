@@ -71,3 +71,21 @@ Lookups/minute depend on your **contribution ratio**: of the distinct phones you
 | throttled | < 20% | 10/min |
 
 Outcome submissions: 600 requests/min.
+
+---
+
+## Consumer portal API (public, used by /consumer)
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/public/otp/request` | `{phone}` → sends a 6-digit code (10 min). 10/h per IP, 3/h per number. Same answer whether the number is known or not. 503 `SMS_UNAVAILABLE` if no provider. |
+| POST | `/public/otp/verify` | `{phone, code}` → sets an httpOnly `tiqa_consumer` cookie (15 min, SameSite=Strict). Max 5 attempts per code. |
+| GET | `/public/me` | Records for this number: `{id, month, outcome, city, carrier, status}`, `stores_count`, requests. No store identities. |
+| POST | `/public/me/requests` | `{type: "dispute" \| "deletion", outcome_ids?, message?}`. Freezes the records immediately. |
+| POST | `/public/logout` | |
+
+## Admin API (staff session)
+
+`GET /admin/overview`, `GET /admin/requests?status=`, `POST /admin/requests/:id/resolve {decision: upheld|rejected, note?}`,
+`GET /admin/merchants`, `PATCH /admin/merchants/:id {trust_override?: 0..1|null, status?: active|suspended}`,
+`GET /admin/flags?status=`, `PATCH /admin/flags/:id {status: dismissed|actioned}`, `POST /admin/trust/recompute`. All actions are audited.

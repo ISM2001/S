@@ -20,6 +20,8 @@ const DAY = 86_400_000;
 const now = Date.now();
 
 export const DEMO_EMAIL = "demo@tiqa.test";
+export const STAFF_EMAIL = "admin@tiqa.test";
+export const STAFF_PASSWORD = "admin-password-123";
 export const DEMO_PASSWORD = "demo-password-123";
 /** Fixed development key so the README's curl examples work. Never valid in production (different DB). */
 export const DEMO_API_KEY_PREFIX = "000000000000";
@@ -52,10 +54,11 @@ async function main() {
   const old = await prisma.merchant.findMany({ where: { isSeed: true }, select: { id: true } });
   await prisma.auditLog.deleteMany({ where: { merchantId: { in: old.map((m) => m.id) } } });
   await prisma.merchant.deleteMany({ where: { isSeed: true } });
+  await prisma.dataSubjectRequest.deleteMany({ where: { items: { some: { merchantId: { in: old.map((m) => m.id) } } } } });
   await prisma.user.deleteMany({ where: { email: { endsWith: "@tiqa.test" } } });
 
   // ── Merchants ─────────────────────────────────────────────────────────
-  const names = ["Demo Store", "Bazar Casa", "Mode Rabat", "Tech Fès", "Beauté Marrakech"];
+  const names = ["Demo Store", "Bazar Casa", "Mode Rabat", "Tech Fès", "Beauté Marrakech", "Promo Flash"];
   const merchants = [];
   for (const [i, name] of names.entries()) {
     merchants.push(
@@ -81,6 +84,9 @@ async function main() {
       memberships: { create: { merchantId: demo.id, role: "owner" } },
     },
   });
+  await prisma.user.create({
+    data: { email: STAFF_EMAIL, passwordHash: await argonHash(STAFF_PASSWORD), emailVerifiedAt: new Date(), isStaff: true },
+  });
   await prisma.apiKey.create({
     data: { merchantId: demo.id, name: "Dev key (seed)", prefix: DEMO_API_KEY_PREFIX, secretHash: sha256(DEMO_API_KEY_SECRET) },
   });
@@ -88,7 +94,8 @@ async function main() {
   // ── Customers & outcomes ──────────────────────────────────────────────
   type GenOutcome = { phone: string; merchantId: string; outcome: OutcomeType; source: OutcomeSource; carrier: string; city: string; t: number; ref: string };
   const all: GenOutcome[] = [];
-  const others = merchants.slice(1);
+  const others = merchants.slice(1, 5);
+  const promo = merchants[5]!; // suspicious merchant for the admin panel demo
   let refN = 0;
   const add = (phone: string, m: { id: string }, outcome: OutcomeType, ageDays: number, source: OutcomeSource, city = pick(CITIES)) =>
     all.push({ phone, merchantId: m.id, outcome, source, carrier: pick(CARRIERS), city, t: now - ageDays * DAY, ref: `SEED-${++refN}` });
@@ -103,6 +110,10 @@ async function main() {
   // 0600000002: reliable customer → LOW
   for (const [i, m] of [others[0], others[1], others[2], others[3], others[1]].entries()) add(demoPhone(2), m!, "delivered", 10 + i * 30, "carrier_export");
   // 0600000003: never seen → INSUFFICIENT DATA (no outcomes)
+  // 0600000004: refused at 2 stores, but the person disputed everything → records frozen → INSUFFICIENT DATA
+  add(demoPhone(4), others[0]!, "refused", 12, "merchant_manual");
+  add(demoPhone(4), others[1]!, "refused", 20, "merchant_manual");
+  add(demoPhone(4), others[1]!, "refused", 33, "merchant_manual");
 
   for (let i = 100; i < 3100; i++) {
     const phone = demoPhone(i);
@@ -116,7 +127,7 @@ async function main() {
         x < persona.pRefuse ? (rand() < 0.75 ? "refused" : "returned") : x < persona.pRefuse + persona.pUnreachable ? "unreachable" : "delivered";
       const s = rand();
       const source: OutcomeSource = s < 0.1 ? "carrier_api" : s < 0.6 ? "carrier_export" : "merchant_manual";
-      add(phone, pick(merchants), outcome, Math.floor(rand() * 330), source, city);
+      add(phone, pick(merchants.slice(0, 5)), outcome, Math.floor(rand() * 330), source, city);
     }
   }
 
@@ -131,6 +142,36 @@ async function main() {
     merchantOrderRef: o.ref,
   }));
   for (let i = 0; i < rows.length; i += 2000) await prisma.outcome.createMany({ data: rows.slice(i, i + 2000) });
+
+  // ── "Promo Flash": reports refusals that its own carrier exports later contradict ──
+  const promoRows = Array.from({ length: 40 }, (_, k) => ({
+    phoneHash: phoneHash(demoPhone(5000 + k), pepper),
+    merchantId: promo.id,
+    outcome: k < 26 ? ("delivered" as const) : ("refused" as const),
+    source: "carrier_export" as const,
+    carrierChecked: true,
+    contradicted: k < 26, // was entered as "refused", carrier says "delivered"
+    carrier: "amana",
+    occurredAt: new Date(now - (5 + k) * DAY),
+    merchantOrderRef: `PF-${k}`,
+  }));
+  await prisma.outcome.createMany({ data: promoRows });
+
+  // ── An open consumer dispute (shows in the admin panel) ──
+  const disputed = await prisma.outcome.findMany({ where: { phoneHash: phoneHash(demoPhone(4), pepper) } });
+  await prisma.dataSubjectRequest.create({
+    data: {
+      phoneHash: phoneHash(demoPhone(4), pepper),
+      type: "dispute",
+      message: "Je n'ai jamais passé ces commandes, quelqu'un a utilisé mon numéro.",
+      items: {
+        create: disputed.map((o) => ({
+          outcomeId: o.id, merchantId: o.merchantId, outcome: o.outcome, source: o.source, occurredAt: o.occurredAt, merchantOrderRef: o.merchantOrderRef,
+        })),
+      },
+    },
+  });
+  await prisma.outcome.updateMany({ where: { id: { in: disputed.map((o) => o.id) } }, data: { status: "frozen" } });
 
   // ── Lookup history for the demo store (bands computed with the real scorer) ──
   const byPhone = new Map<string, ScoringOutcome[]>();
@@ -167,8 +208,10 @@ async function main() {
   console.log("  Outcomes:", Object.fromEntries(counts.map((c) => [c.outcome, c._count._all])));
   console.log("  Lookups (Demo Store):", lookups.length);
   console.log(`\n  Dashboard login:  ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
+  console.log(`  Admin (staff):    ${STAFF_EMAIL} / ${STAFF_PASSWORD}`);
   console.log(`  Dev API key:      ${DEMO_API_KEY}`);
-  console.log("\n  Try: 0600000001 (HIGH) · 0600000002 (LOW) · 0600000003 (no history)\n");
+  console.log("\n  Try: 0600000001 (HIGH) · 0600000002 (LOW) · 0600000003 (no history) · 0600000004 (disputed → frozen)");
+  console.log("  Trust weights & anomaly flags are computed by the worker (`pnpm dev` starts it).\n");
 }
 
 main()

@@ -5,6 +5,9 @@ import type { Deps } from "./deps";
 import { ApiError } from "./lib/errors";
 import { authRoutes } from "./routes/auth";
 import { dashboardRoutes } from "./routes/dashboard";
+import { adminRoutes } from "./routes/admin";
+import { consumerRoutes } from "./routes/consumer";
+import { teamRoutes } from "./routes/team";
 import { v1Routes } from "./routes/v1";
 import { Network } from "./services/network";
 
@@ -23,6 +26,8 @@ export const LOG_REDACT = [
   "body.phone",
   "body.password",
   "body.csv",
+  "body.code",
+  "body.token",
 ];
 
 export async function buildApp(deps: Deps, opts: { logger?: FastifyServerOptions["logger"] } = {}) {
@@ -62,6 +67,9 @@ export async function buildApp(deps: Deps, opts: { logger?: FastifyServerOptions
   await app.register(v1Routes, { deps, network });
   await app.register(authRoutes, { deps });
   await app.register(dashboardRoutes, { deps, network });
+  await app.register(teamRoutes, { deps });
+  await app.register(consumerRoutes, { deps, network });
+  await app.register(adminRoutes, { deps, network });
 
   return app;
 }

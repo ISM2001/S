@@ -71,6 +71,16 @@ export async function requireSession(deps: Deps, req: FastifyRequest): Promise<S
   };
 }
 
+/** Tiqa staff (admin panel). Staff accounts don't need a merchant membership. */
+export async function requireStaff(deps: Deps, req: FastifyRequest): Promise<{ userId: string; email: string }> {
+  const token = req.cookies[SESSION_COOKIE];
+  if (!token) throw unauthorized();
+  const session = await deps.prisma.session.findUnique({ where: { idHash: sha256(token) }, include: { user: true } });
+  if (!session || session.expiresAt < new Date()) throw unauthorized("SESSION_EXPIRED");
+  if (!session.user.isStaff) throw forbidden("STAFF_ONLY");
+  return { userId: session.user.id, email: session.user.email };
+}
+
 export function requireRole(ctx: SessionContext, roles: Role[]) {
   if (!roles.includes(ctx.role)) throw forbidden("INSUFFICIENT_ROLE");
 }

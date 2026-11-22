@@ -12,6 +12,7 @@ const NAV = [
   ["/dashboard/lookup", "lookup"],
   ["/dashboard/upload", "upload"],
   ["/dashboard/history", "history"],
+  ["/dashboard/team", "team"],
   ["/dashboard/api-keys", "apiKeys"],
 ] as const;
 

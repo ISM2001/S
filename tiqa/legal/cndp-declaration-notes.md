@@ -10,7 +10,10 @@
 4. **Consumer objection and deletion:** must Tiqa honor every deletion request, or can it assess an objection against the legitimate interest? (Product default: freeze immediately, review, delete if upheld.)
 5. **Historical backfill:** can merchants upload past delivery outcomes collected before customers were informed?
 6. **Hosting:** if servers are outside Morocco, which transfer authorization is required? (Hosting not yet chosen.)
-7. **Automated decisions:** is a risk band shown to a merchant an "automated decision" under Moroccan law? We position it as decision support only.
+7. **Access right scope:** the portal shows a person their records (month, outcome, city, carrier) but **not which stores** reported them (to protect merchants and prevent retaliation). Is this compatible with the right to know the *source* of the data?
+8. **Audit logs after deletion:** when a deletion is upheld, audit log entries keep the pseudonymous hash until audit retention ends (24 months planned). Acceptable as a legal obligation / accountability record?
+9. **SMS OTP provider:** a provider will process phone numbers to send codes (sub-processor; location?).
+10. **Automated decisions:** is a risk band shown to a merchant an "automated decision" under Moroccan law? We position it as decision support only.
 
 ## Processing description (as built)
 | Item | Value |
@@ -23,5 +26,5 @@
 | Recipients | Merchants receive only an aggregate risk band, a 0–100 score and coarse count ranges. Never the identity of other merchants or individual records. |
 | Retention | Outcomes and lookups: 12 months (configurable), then automatic hard deletion. Audit logs: 24 months (to confirm). |
 | Security | Per-merchant hashed API keys, argon2 passwords, audit log of every lookup, TLS, secret key in a secret manager (production) |
-| Data subject rights | Public portal: verify phone by OTP, see summary, dispute (records frozen immediately) or request deletion (Phase 2) |
+| Data subject rights | Public portal (built): verify phone by SMS code, see records, dispute (records frozen immediately) or request deletion. Staff review: upheld dispute → records deleted; upheld deletion → all data for the number deleted |
 | Hosting | TBD (Morocco vs. abroad, see question 6) |

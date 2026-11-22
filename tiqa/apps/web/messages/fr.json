@@ -27,14 +27,16 @@
     "termsDraft": "(conditions en cours de revue juridique)",
     "haveAccount": "Déjà un compte ?",
     "magicVerifying": "Connexion en cours…",
-    "magicInvalid": "Ce lien n'est plus valable. Demandez-en un nouveau."
+    "magicInvalid": "Ce lien n'est plus valable. Demandez-en un nouveau.",
+    "consumerLink": "Vous êtes un client ? Consultez les données liées à votre numéro"
   },
   "nav": {
     "overview": "Vue d'ensemble",
     "lookup": "Vérifier un numéro",
     "upload": "Importer des résultats",
     "history": "Historique",
-    "apiKeys": "Clés API"
+    "apiKeys": "Clés API",
+    "team": "Équipe"
   },
   "bands": {
     "low": "Risque faible",
@@ -179,6 +181,147 @@
     "CSV_MAPPING_UNKNOWN_COLUMN": "Colonne introuvable dans le fichier.",
     "INSUFFICIENT_ROLE": "Action réservée aux administrateurs de la boutique.",
     "MAGIC_LINK_INVALID": "Ce lien n'est plus valable.",
-    "generic": "Une erreur est survenue. Réessayez."
+    "generic": "Une erreur est survenue. Réessayez.",
+    "OTP_INVALID": "Code incorrect ou expiré.",
+    "SMS_UNAVAILABLE": "L'envoi de SMS n'est pas encore disponible.",
+    "NOTHING_TO_DISPUTE": "Aucune donnée à contester.",
+    "CONSUMER_SESSION_EXPIRED": "Session expirée : vérifiez à nouveau votre numéro.",
+    "ALREADY_MEMBER": "Cette personne fait déjà partie de l'équipe.",
+    "PASSWORD_REQUIRED": "Choisissez un mot de passe (10 caractères minimum).",
+    "INVITE_INVALID": "Cette invitation n'est plus valable.",
+    "CANNOT_REMOVE_YOURSELF": "Vous ne pouvez pas vous retirer vous-même.",
+    "CANNOT_CHANGE_OWN_ROLE": "Vous ne pouvez pas changer votre propre rôle.",
+    "REQUEST_ALREADY_RESOLVED": "Demande déjà traitée."
+  },
+  "consumer": {
+    "title": "Vos données dans le réseau Tiqa",
+    "intro": "Tiqa aide les boutiques en ligne marocaines à réduire les commandes refusées en paiement à la livraison. Les boutiques partagent le résultat des livraisons (livrée, refusée…). Votre numéro n'est jamais conservé en clair : il est transformé en code pseudonyme.",
+    "rights": "Conformément à la loi 09-08, vous pouvez consulter ces données, contester un résultat ou demander leur suppression. Vérifiez d'abord que ce numéro est bien le vôtre.",
+    "phone": "Votre numéro de téléphone",
+    "sendCode": "Recevoir un code par SMS",
+    "codeSent": "Un code à 6 chiffres a été envoyé par SMS (valable 10 minutes).",
+    "code": "Code reçu par SMS",
+    "verify": "Vérifier",
+    "changeNumber": "Changer de numéro",
+    "summaryTitle": "Ce que le réseau contient pour votre numéro",
+    "noRecords": "Aucune donnée n'est enregistrée pour ce numéro.",
+    "storesCount": "{count, plural, =0 {Aucune boutique} one {1 boutique a} other {# boutiques ont}} partagé des résultats de livraison pour ce numéro.",
+    "storesHidden": "Les noms des boutiques ne sont pas affichés.",
+    "retention": "Les données sont supprimées automatiquement après {months} mois.",
+    "month": "Mois",
+    "outcome": "Résultat",
+    "city": "Ville",
+    "carrier": "Transporteur",
+    "status": "Statut",
+    "statusActive": "Actif",
+    "statusFrozen": "Gelé (en vérification)",
+    "disputeTitle": "Contester un résultat",
+    "disputeHelp": "Cochez les lignes incorrectes (ou aucune pour tout contester). Elles sont gelées immédiatement : plus aucune boutique ne les voit jusqu'à vérification.",
+    "message": "Message (facultatif, n'indiquez pas d'informations sensibles)",
+    "disputeSelected": "Contester la sélection",
+    "disputeAll": "Tout contester",
+    "deleteTitle": "Demander la suppression",
+    "deleteHelp": "Toutes les données liées à votre numéro sont gelées immédiatement, puis supprimées après examen de votre demande.",
+    "deleteButton": "Demander la suppression de mes données",
+    "deleteConfirm": "Confirmer la demande de suppression de toutes les données liées à ce numéro ?",
+    "requestSent": "Votre demande a été enregistrée. Les données concernées sont gelées.",
+    "requestsTitle": "Vos demandes",
+    "requestType": {
+      "dispute": "Contestation",
+      "deletion": "Suppression"
+    },
+    "requestStatus": {
+      "open": "En cours d'examen",
+      "upheld": "Acceptée",
+      "rejected": "Refusée"
+    },
+    "logout": "Terminer",
+    "legalDraft": "Politique de confidentialité en cours de revue juridique."
+  },
+  "team": {
+    "title": "Équipe",
+    "intro": "Invitez vos collègues (confirmation des commandes, logistique). Les membres peuvent vérifier des numéros et importer des résultats ; seuls les administrateurs gèrent l'équipe et les clés API.",
+    "email": "E-mail",
+    "role": "Rôle",
+    "roles": {
+      "owner": "Propriétaire",
+      "admin": "Administrateur",
+      "member": "Membre"
+    },
+    "invite": "Inviter",
+    "inviteSent": "Invitation envoyée.",
+    "pending": "Invitations en attente",
+    "expires": "Expire le {date}",
+    "cancelInvite": "Annuler",
+    "remove": "Retirer",
+    "confirmRemove": "Retirer cette personne de l'équipe ?",
+    "you": "vous"
+  },
+  "invite": {
+    "title": "Rejoindre une équipe",
+    "body": "Vous êtes invité(e) à rejoindre « {merchant} » en tant que {role}.",
+    "setPassword": "Choisissez un mot de passe",
+    "accept": "Rejoindre l'équipe",
+    "invalid": "Cette invitation n'est plus valable."
+  },
+  "admin": {
+    "title": "Administration Tiqa",
+    "nav": {
+      "requests": "Demandes",
+      "merchants": "Marchands",
+      "flags": "Alertes"
+    },
+    "overview": "{requests} demandes ouvertes · {flags} alertes ouvertes · {merchants} marchands ({low} à confiance basse)",
+    "open": "Ouvertes",
+    "upheld": "Acceptées",
+    "rejected": "Refusées",
+    "noRequests": "Aucune demande.",
+    "records": "{count, plural, one {# enregistrement} other {# enregistrements}}",
+    "store": "Boutique",
+    "orderRef": "Commande",
+    "source": "Source",
+    "date": "Date",
+    "outcome": "Résultat",
+    "note": "Note de décision (facultatif)",
+    "uphold": "Accepter",
+    "reject": "Refuser",
+    "upholdHelpDispute": "Accepter = les enregistrements sont faux : ils sont supprimés et comptent contre la boutique.",
+    "upholdHelpDeletion": "Accepter = toutes les données du numéro sont supprimées.",
+    "rejectHelp": "Refuser = les enregistrements sont dégelés.",
+    "merchant": "Marchand",
+    "status": "Statut",
+    "trust": "Confiance",
+    "override": "Forçage",
+    "outcomes": "Résultats",
+    "lookups": "Vérifications",
+    "flags": "Alertes",
+    "contradiction": "Taux de contradiction",
+    "setOverride": "Forcer",
+    "clearOverride": "Retirer le forçage",
+    "suspend": "Suspendre",
+    "reactivate": "Réactiver",
+    "recompute": "Recalculer la confiance",
+    "noFlags": "Aucune alerte.",
+    "dismiss": "Ignorer (faux positif)",
+    "action": "Traitée",
+    "severity": {
+      "low": "faible",
+      "medium": "moyenne",
+      "high": "élevée"
+    },
+    "kinds": {
+      "REFUSAL_SPIKE": "Pic de refus inhabituel",
+      "UNLOOKED_REFUSALS": "Refus déclarés pour des numéros jamais vérifiés",
+      "CONTRADICTION_HIGH": "Refus souvent contredits par le transporteur",
+      "DISPUTES_UPHELD": "Plusieurs contestations acceptées"
+    },
+    "notStaff": "Accès réservé à l'équipe Tiqa.",
+    "sources": {
+      "carrier_api": "API transporteur",
+      "carrier_export": "Export transporteur",
+      "merchant_manual": "Saisie boutique"
+    },
+    "dismissedTab": "Ignorées",
+    "actionedTab": "Traitées"
   }
 }

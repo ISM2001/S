@@ -76,6 +76,10 @@ export class Network {
     return out;
   }
 
+  clearTrustCache(): void {
+    this.trustCache.clear();
+  }
+
   async scoreHash(hash: Bytes, now = new Date()): Promise<ScoreResult> {
     const outcomes = await this.outcomesFor(hash);
     const trust = await this.trustFor(outcomes.map((o) => o.merchantId));

@@ -3,11 +3,12 @@ import { Redis } from "ioredis";
 import { buildApp } from "./app";
 import { loadEnv } from "./env";
 import { createMailer } from "./lib/mailer";
+import { createSmsSender } from "./lib/sms";
 
 const env = loadEnv();
 const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: 2, enableOfflineQueue: false });
 const consoleLog = { info: (o: object, m: string) => console.log(m, o) };
-const app = await buildApp({ prisma, redis, env, mailer: createMailer(env, consoleLog) });
+const app = await buildApp({ prisma, redis, env, mailer: createMailer(env, consoleLog), sms: createSmsSender(env, consoleLog) });
 
 await app.listen({ port: env.API_PORT, host: "0.0.0.0" });
 

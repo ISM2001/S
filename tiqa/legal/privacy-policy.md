@@ -25,7 +25,7 @@ Les boutiques voient uniquement un niveau de risque, un score et des fourchettes
 12 mois, puis suppression automatique.
 
 ## 6. Vos droits (loi 09-08)
-Accès, rectification, opposition. Sur [URL du portail, phase 2], vous pouvez vérifier votre numéro par code SMS, voir un résumé des données, **contester** un résultat (il est alors gelé et n'est plus utilisé jusqu'à vérification) ou demander la suppression. Contact : [e-mail].
+Accès, rectification, opposition. Sur [URL]/consumer, vous pouvez vérifier votre numéro par code SMS, voir un résumé des données, **contester** un résultat (il est alors gelé et n'est plus utilisé jusqu'à vérification) ou demander la suppression. Contact : [e-mail].
 
 ## 7. Déclaration CNDP
 [Numéro de récépissé / autorisation CNDP : à compléter]
