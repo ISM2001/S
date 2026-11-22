@@ -36,7 +36,8 @@
     "upload": "Importer des résultats",
     "history": "Historique",
     "apiKeys": "Clés API",
-    "team": "Équipe"
+    "team": "Équipe",
+    "integrations": "Intégrations"
   },
   "bands": {
     "low": "Risque faible",
@@ -107,7 +108,9 @@
       "UNKNOWN_STATUS": "statut non reconnu",
       "INVALID_DATE": "date invalide",
       "MISSING_VALUE": "valeur manquante"
-    }
+    },
+    "savedMapping": "Correspondance mémorisée depuis votre dernier import de ce type de fichier.",
+    "template": "Télécharger un modèle de fichier"
   },
   "history": {
     "title": "Historique des vérifications",
@@ -191,7 +194,14 @@
     "INVITE_INVALID": "Cette invitation n'est plus valable.",
     "CANNOT_REMOVE_YOURSELF": "Vous ne pouvez pas vous retirer vous-même.",
     "CANNOT_CHANGE_OWN_ROLE": "Vous ne pouvez pas changer votre propre rôle.",
-    "REQUEST_ALREADY_RESOLVED": "Demande déjà traitée."
+    "REQUEST_ALREADY_RESOLVED": "Demande déjà traitée.",
+    "PHONE_NOT_FOUND": "Numéro de téléphone introuvable dans la commande.",
+    "WEBHOOK_URL_INVALID": "URL invalide.",
+    "WEBHOOK_URL_HTTPS_REQUIRED": "L'URL doit commencer par https://",
+    "WEBHOOK_URL_NOT_PUBLIC": "Cette adresse n'est pas accessible publiquement.",
+    "TOO_MANY_ENDPOINTS": "5 URLs maximum.",
+    "SHOPIFY_SHOP_INVALID": "Nom de boutique Shopify invalide.",
+    "SHOP_LINKED_TO_ANOTHER_ACCOUNT": "Cette boutique est déjà liée à un autre compte Tiqa."
   },
   "consumer": {
     "title": "Vos données dans le réseau Tiqa",
@@ -323,5 +333,60 @@
     },
     "dismissedTab": "Ignorées",
     "actionedTab": "Traitées"
+  },
+  "integrations": {
+    "title": "Intégrations",
+    "intro": "Connectez votre boutique ou vos outils pour vérifier chaque commande automatiquement.",
+    "connected": "Connexion réussie.",
+    "copy": "Copier",
+    "copied": "Copié",
+    "generic": {
+      "title": "Webhook générique (tout outil)",
+      "help": "Envoyez vos commandes vers cette URL secrète depuis n'importe quel outil (Google Sheets, n8n, Make, votre site…). Tiqa répond avec le niveau de risque. Si la commande contient un statut de livraison (Livré, Refusé…), il est enregistré comme résultat.",
+      "create": "Générer l'URL",
+      "rotate": "Régénérer l'URL",
+      "confirmRotate": "L'ancienne URL cessera de fonctionner. Continuer ?",
+      "urlOnce": "Copiez cette URL maintenant : elle contient une clé secrète et ne sera plus affichée.",
+      "active": "Actif",
+      "lastEvent": "Dernier appel : {date}",
+      "never": "Jamais appelé",
+      "paths": "Chemins des champs (facultatif, si la détection automatique ne suffit pas)",
+      "phonePath": "Téléphone",
+      "refPath": "N° de commande",
+      "statusPath": "Statut",
+      "example": "Exemple"
+    },
+    "outbound": {
+      "title": "Webhooks sortants",
+      "help": "Tiqa envoie le résultat de chaque vérification (événement score.created) à votre système, signé (en-tête Tiqa-Signature). Jamais de numéro de téléphone dans le message.",
+      "url": "URL de réception",
+      "add": "Ajouter",
+      "secretOnce": "Secret de signature (affiché une seule fois) :",
+      "test": "Tester",
+      "testOk": "Test réussi (HTTP {status})",
+      "testFail": "Échec : {error}",
+      "deliveries": "Derniers envois",
+      "delete": "Supprimer",
+      "disabled": "Désactivé"
+    },
+    "shopify": {
+      "title": "Shopify",
+      "help": "Chaque nouvelle commande est vérifiée et reçoit une étiquette (ex. « tiqa-risque-eleve ») dans votre admin Shopify.",
+      "shop": "Votre boutique (xxx.myshopify.com)",
+      "connect": "Connecter Shopify",
+      "codOnly": "Seulement les commandes en paiement à la livraison",
+      "tag": "Ajouter l'étiquette de risque",
+      "notConfigured": "Application Shopify pas encore activée sur ce serveur.",
+      "disconnect": "Déconnecter",
+      "inactive": "Désinstallée"
+    },
+    "youcan": {
+      "title": "YouCan",
+      "help": "Chaque nouvelle commande YouCan est vérifiée automatiquement ; le résultat apparaît dans votre historique Tiqa (YouCan ne documente pas encore d'étiquette sur les commandes).",
+      "connect": "Connecter YouCan",
+      "store": "Boutique YouCan",
+      "subscriptionError": "Abonnement aux commandes échoué : reconnectez la boutique.",
+      "notConfigured": "Application YouCan pas encore activée sur ce serveur."
+    }
   }
 }

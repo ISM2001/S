@@ -7,6 +7,9 @@ import { authRoutes } from "./routes/auth";
 import { dashboardRoutes } from "./routes/dashboard";
 import { adminRoutes } from "./routes/admin";
 import { consumerRoutes } from "./routes/consumer";
+import { integrationRoutes } from "./routes/integrations";
+import { shopifyRoutes } from "./routes/shopify";
+import { youcanRoutes } from "./routes/youcan";
 import { teamRoutes } from "./routes/team";
 import { v1Routes } from "./routes/v1";
 import { Network } from "./services/network";
@@ -70,6 +73,9 @@ export async function buildApp(deps: Deps, opts: { logger?: FastifyServerOptions
   await app.register(teamRoutes, { deps });
   await app.register(consumerRoutes, { deps, network });
   await app.register(adminRoutes, { deps, network });
+  await app.register(integrationRoutes, { deps, network });
+  await app.register(shopifyRoutes, { deps, network });
+  await app.register(youcanRoutes, { deps, network });
 
   return app;
 }

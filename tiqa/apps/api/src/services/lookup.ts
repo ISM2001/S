@@ -6,6 +6,9 @@ import { audit, type Actor } from "./audit";
 import { getContribution } from "./contribution";
 import type { Network } from "./network";
 import { hit } from "./rate-limit";
+import { emitEvent } from "./webhooks-out";
+
+export type LookupChannel = "api" | "dashboard" | "webhook" | "shopify" | "youcan";
 
 export interface ScoreResponse {
   lookup_id: string;
@@ -24,7 +27,7 @@ export interface ScoreResponse {
 export async function performLookup(
   deps: Deps,
   network: Network,
-  args: { merchantId: string; actor: Actor; e164: string; orderRef?: string | null; channel: "api" | "dashboard" },
+  args: { merchantId: string; actor: Actor; e164: string; orderRef?: string | null; channel: LookupChannel },
 ): Promise<{ response: ScoreResponse; rateRemaining: number }> {
   const contribution = await getContribution(deps, args.merchantId);
   const { remaining } = await hit(deps.redis, `lookup:${args.merchantId}`, contribution.limitPerMin);
@@ -65,16 +68,16 @@ export async function performLookup(
     }),
   ]);
 
-  return {
-    rateRemaining: remaining,
-    response: {
-      lookup_id: lookup.id,
-      band: result.band,
-      score: result.score,
-      outcomes_count: outcomesBucket,
-      merchants_count: merchantsBucket,
-      reasons: result.reasons,
-      score_version: result.scoreVersion,
-    },
+  const response: ScoreResponse = {
+    lookup_id: lookup.id,
+    band: result.band,
+    score: result.score,
+    outcomes_count: outcomesBucket,
+    merchants_count: merchantsBucket,
+    reasons: result.reasons,
+    score_version: result.scoreVersion,
   };
+  // Outbound webhook (no phone number in the payload; the merchant matches on order_ref).
+  void emitEvent(deps, args.merchantId, "score.created", { ...response, order_ref: args.orderRef ?? null, channel: args.channel }).catch(() => undefined);
+  return { rateRemaining: remaining, response };
 }

@@ -3,12 +3,12 @@
 **Shared delivery-risk network for cash-on-delivery e-commerce in Morocco.**
 Sellers send an order's phone number and get back a risk band in milliseconds, based on delivery outcomes from every seller in the network ("give data to get data").
 
-> Status: **Phase 2 done**: API, scoring, CSV import, dashboard (FR + AR/RTL), consumer rights portal, admin panel, trust weights & anomaly flags, team invites.
+> Status: **Phase 3 done**: API, scoring, CSV import (remembered mappings), dashboard (FR + AR/RTL), consumer rights portal, admin panel, trust weights & anomaly flags, team invites, integrations (generic webhook in/out, Shopify app stub, YouCan app).
 > ⚖️ No real customer data before the CNDP filing, lawyer review of [`/legal`](legal/README.md) and the consumer rights portal (Phase 2).
 
 - Design, data model, scoring formula, decisions: [`docs/DESIGN.md`](docs/DESIGN.md)
 - API reference: [`docs/API.md`](docs/API.md)
-- Integrations research status: [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md)
+- Integrations (Shopify, YouCan, carriers): research findings & status: [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md)
 
 ---
 
@@ -124,9 +124,18 @@ pnpm --filter @tiqa/api job:trust
 - **Team**: owners/admins invite colleagues by email (`/dashboard/team`). Roles: owner, admin, member.
 - **SMS**: no paid provider yet. Codes are printed to the console with a masked number. In production the portal answers "SMS unavailable" until a provider is configured.
 
+## Integrations (Phase 3)
+
+**Dashboard → Intégrations**:
+- **Generic webhook**: a secret URL for any tool. Orders are scored, delivery statuses are recorded.
+- **Outbound webhooks**: signed `score.created` events, with retries handled by the worker.
+- **Shopify** and **YouCan**: OAuth install, then each new order is scored automatically. Shopify orders also get a risk tag.
+
+To enable Shopify/YouCan locally, set `SHOPIFY_API_KEY/SECRET` or `YOUCAN_CLIENT_ID/SECRET` in `.env` (from the Shopify Partner Dashboard / YouCan Partners), and make `API_PUBLIC_URL` reachable from the internet (e.g. a tunnel) so the platforms can call back.
+
 ## Roadmap
 
 - ~~Phase 2~~ done.
 - **Before any real data**: lawyer review of `/legal`, CNDP filing, SMS provider, 2FA for staff accounts, hosting decision.
-- **Phase 3**: generic webhook, Shopify app stub, YouCan (after API research), carrier CSV templates.
+- ~~Phase 3~~ done (see docs/INTEGRATIONS.md for what still needs Shopify/YouCan accounts and reviews).
 - **Phase 4**: billing (usage in MAD), payments (CMI etc., to evaluate), hardening (KMS, load tests, backups).

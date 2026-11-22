@@ -33,6 +33,8 @@ export function setupTestApp(envOverrides: Record<string, string> = {}): TestCtx
     PHONE_HASH_PEPPER: PEPPER,
     SESSION_SECRET: "test_session_secret_0123456789abcdef0123456789",
     RATE_LIMIT_PER_MIN: "1000",
+    INTEGRATION_ENC_KEY: "a".repeat(64),
+    API_PUBLIC_URL: "https://tiqa.test/api",
     ...envOverrides,
   });
   const deps: Deps = { prisma, redis, env, mailer: { send: async (m) => void mails.push(m) },
@@ -43,12 +45,13 @@ export function setupTestApp(envOverrides: Record<string, string> = {}): TestCtx
   beforeEach(async () => {
     if (!ctx.app) ctx.app = await buildApp(deps, { logger: false });
     await prisma.$executeRawUnsafe(
-      `TRUNCATE "RequestItem","DataSubjectRequest","OtpChallenge","ConsumerSession","AnomalyFlag","Invite","Outcome","Lookup","AuditLog","ApiKey","Session","MagicLink","Membership","User","UsageMonthly","Subscription","CsvImport","Merchant","Plan" RESTART IDENTITY CASCADE`,
+      `TRUNCATE "WebhookDelivery","WebhookEndpoint","Integration","CsvMapping","RequestItem","DataSubjectRequest","OtpChallenge","ConsumerSession","AnomalyFlag","Invite","Outcome","Lookup","AuditLog","ApiKey","Session","MagicLink","Membership","User","UsageMonthly","Subscription","CsvImport","Merchant","Plan" RESTART IDENTITY CASCADE`,
     );
     await redis.flushdb();
     mails.length = 0;
     sms.length = 0;
     ctx.app.network.clearTrustCache();
+    delete deps.fetch;
   });
   afterAll(async () => {
     await ctx.app?.close();

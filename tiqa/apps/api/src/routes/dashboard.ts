@@ -8,7 +8,7 @@ import { validate } from "../lib/validate";
 import { audit } from "../services/audit";
 import { requireRole, requireSession } from "../services/auth";
 import { getContribution } from "../services/contribution";
-import { mapCsvRows, parseCsv, suggestMapping } from "../services/csv";
+import { headerSignature, mapCsvRows, parseCsv, suggestMapping } from "../services/csv";
 import { performLookup } from "../services/lookup";
 import type { Network } from "../services/network";
 import { ingestOutcomes } from "../services/outcomes";
@@ -116,11 +116,21 @@ export async function dashboardRoutes(app: FastifyInstance, { deps, network }: {
 
   // ── CSV upload ──────────────────────────────────────────────────────────
   app.post("/app/outcomes/csv/preview", { bodyLimit: 12 * 1024 * 1024 }, async (req) => {
-    await requireSession(deps, req);
     const { csv } = validate(z.object({ csv: z.string().min(1).max(10 * 1024 * 1024) }), req.body);
+    const s = await requireSession(deps, req);
     const { headers, records } = parseCsv(csv);
     if (!headers.length) throw badRequest("CSV_EMPTY");
-    return { headers, suggested_mapping: suggestMapping(headers), sample: records.slice(0, 5), total_rows: records.length };
+    // Same file layout as a previous import (e.g. the same carrier's export)? Reuse that mapping.
+    const saved = await prisma.csvMapping.findUnique({ where: { merchantId_headerSignature: { merchantId: s.merchantId, headerSignature: headerSignature(headers) } } });
+    return {
+      headers,
+      suggested_mapping: saved ? saved.mapping : suggestMapping(headers),
+      mapping_source: saved ? "saved" : "guessed",
+      source_type: saved?.sourceType ?? null,
+      default_carrier: saved?.defaultCarrier ?? null,
+      sample: records.slice(0, 5),
+      total_rows: records.length,
+    };
   });
 
   app.post("/app/outcomes/csv", { bodyLimit: 12 * 1024 * 1024 }, async (req) => {
@@ -132,6 +142,15 @@ export async function dashboardRoutes(app: FastifyInstance, { deps, network }: {
       if (col && !headers.includes(col)) throw badRequest("CSV_MAPPING_UNKNOWN_COLUMN", { column: col });
     }
     const mapped = mapCsvRows(records, body.mapping, body.default_carrier);
+    if (mapped.rows.length) {
+      const sig = headerSignature(headers);
+      const data = { mapping: body.mapping, sourceType: body.source_type, defaultCarrier: body.default_carrier ?? null };
+      await prisma.csvMapping.upsert({
+        where: { merchantId_headerSignature: { merchantId: s.merchantId, headerSignature: sig } },
+        create: { merchantId: s.merchantId, headerSignature: sig, ...data },
+        update: data,
+      });
+    }
     const res = await ingestOutcomes(deps, network, s.merchantId, mapped.rows, body.source_type);
     const report = {
       rows_total: records.length,
@@ -163,6 +182,13 @@ export async function dashboardRoutes(app: FastifyInstance, { deps, network }: {
     });
     await getContribution(deps, s.merchantId, { fresh: true });
     return { import_id: imp.id, ...report };
+  });
+
+  /** Downloadable template for sellers who keep their own spreadsheet (fake example numbers). */
+  app.get("/app/outcomes/csv/template", async (req, reply) => {
+    await requireSession(deps, req);
+    reply.header("content-type", "text/csv; charset=utf-8").header("content-disposition", 'attachment; filename="tiqa-modele-resultats.csv"');
+    return "\uFEFFN° commande;Téléphone;Statut;Date;Ville;Transporteur\nCMD-1001;0600000101;Livré;03/11/2026;Casablanca;Amana\nCMD-1002;0600000102;Refusé;04/11/2026;Rabat;Cathedis\nCMD-1003;0600000103;Injoignable;05/11/2026;Fès;Sendit\n";
   });
 
   app.get("/app/imports", async (req) => {

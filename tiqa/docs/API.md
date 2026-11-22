@@ -89,3 +89,29 @@ Outcome submissions: 600 requests/min.
 `GET /admin/overview`, `GET /admin/requests?status=`, `POST /admin/requests/:id/resolve {decision: upheld|rejected, note?}`,
 `GET /admin/merchants`, `PATCH /admin/merchants/:id {trust_override?: 0..1|null, status?: active|suspended}`,
 `GET /admin/flags?status=`, `PATCH /admin/flags/:id {status: dismissed|actioned}`, `POST /admin/trust/recompute`. All actions are audited.
+
+---
+
+## Generic webhook (inbound)
+
+`POST /v1/hooks/{secret}`: the URL is created in **Dashboard → Intégrations** (shown once, can be regenerated). No headers needed.
+
+```json
+{ "order_id": "CMD-1001", "phone": "0612345678" }
+```
+→ `{"type": "score", "order_ref": "CMD-1001", "band": "low", "score": 15, …}` (same fields as `/v1/score`).
+
+Send a delivery status to report an outcome instead: `{"order_id": "CMD-1001", "phone": "0612345678", "status": "Refusé"}` → `{"type": "outcome", "outcome": "refused", …}`.
+Fields are auto-detected (`phone`, `customer.phone`, `shipping_address.phone`, `order_id`, `name`, `status`…) or configured as dot-paths.
+
+## Outbound webhooks
+
+Configure URLs in **Intégrations → Webhooks sortants**. Each event is a `POST` with JSON:
+```json
+{ "id": "<delivery id>", "event": "score.created", "created_at": "…",
+  "data": { "lookup_id": "…", "order_ref": "CMD-1001", "band": "high", "score": 56, "outcomes_count": "3-5",
+            "merchants_count": "2-3", "reasons": ["…"], "score_version": "v1.0", "channel": "shopify" } }
+```
+No phone number is ever included. Headers: `Tiqa-Event`, `Tiqa-Delivery-Id`, `Tiqa-Signature: t=<unix>,v1=<hex>`.
+Verify: `HMAC_SHA256(secret, "<t>.<raw body>")` equals `v1`, and reject if `t` is older than 5 minutes.
+Retries after failure: 1 min, 5 min, 30 min, 2 h, 6 h, 24 h. An endpoint is disabled after 100 consecutive failures ("Tester" re-enables it).

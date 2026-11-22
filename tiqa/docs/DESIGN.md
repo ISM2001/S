@@ -1,6 +1,6 @@
 # Tiqa: design proposal (v0, for approval)
 
-> Status: **APPROVED 2026-11-22** with the decisions below. Phases 0–2 implemented.
+> Status: **APPROVED 2026-11-22** with the decisions below. Phases 0–3 implemented.
 > Legal statements in this document are engineering assumptions, not legal advice. Everything marked ⚖️ needs review by a Moroccan lawyer.
 
 ## Decisions (approved 2026-11-22)
@@ -30,6 +30,7 @@
 * **Anomaly flags implemented:** `REFUSAL_SPIKE` (z-test vs. own 8-week baseline), `UNLOOKED_REFUSALS` (≥ 30 refusals for never-scored phones with ≥ 60% refusal share; a normal backfill doesn't trigger it), `CONTRADICTION_HIGH`, `DISPUTES_UPHELD`. **Dropped:** "bulk identical timestamps", which would fire on every honest CSV without a time column.
 * **Trust** = contradiction component × 0.85^(upheld disputes, 12 months) × open-flag factors (low 0.95, medium 0.8, high 0.5), clamped to [0.1, 1]. Only *open* flags penalize. Once a human dismisses one, the same kind is not re-raised for 30 days.
 * **Deletion upheld:** outcomes deleted. Merchants' lookup rows are kept but unlinked (hash replaced with random bytes). OTPs and sessions are deleted, and the request keeps no phone hash. **Audit logs keep the hash** until their own retention ends (⚖️ to confirm).
+* **Phase 3:** see `docs/INTEGRATIONS.md`. Platform tokens and webhook secrets are AES-256-GCM encrypted (`INTEGRATION_ENC_KEY`). Outbound URLs are SSRF-checked (https + public IPs only in production). Outbound payloads never contain phone numbers.
 * **Not done yet (before go-live):** TOTP 2FA for staff accounts, real SMS provider, a merchant switcher for users who belong to several stores (today the first membership is used).
 
 ---

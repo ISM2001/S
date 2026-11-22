@@ -54,6 +54,9 @@ model Merchant {
   csvImports   CsvImport[]
   invites      Invite[]
   flags        AnomalyFlag[]
+  integrations Integration[]
+  endpoints    WebhookEndpoint[]
+  csvMappings  CsvMapping[]
 }
 
 model User {
@@ -250,6 +253,7 @@ model CsvImport {
 
 enum ActorType {
   api_key
+  integration
   user
   staff
   consumer
@@ -399,4 +403,91 @@ model AnomalyFlag {
 
   @@index([merchantId, kind, status])
   @@index([status, createdAt])
+}
+
+// ── Integrations (Phase 3) ──────────────────────────────────────────────────
+
+enum IntegrationKind {
+  generic
+  shopify
+  youcan
+}
+
+model Integration {
+  id               String          @id @default(cuid())
+  merchantId       String
+  kind             IntegrationKind
+  /// Shop domain for Shopify/YouCan; null for the generic webhook.
+  externalId       String?
+  active           Boolean         @default(true)
+  /// AES-256-GCM encrypted platform access token (never stored in clear).
+  tokenEnc         String?
+  /// sha256 of the secret token in the generic inbound URL.
+  inboundTokenHash Bytes?          @unique
+  /// e.g. field paths for the generic webhook, scoring options.
+  settings         Json            @default("{}")
+  lastEventAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  merchant         Merchant        @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([kind, externalId])
+  @@index([merchantId])
+}
+
+/// Outbound webhooks: Tiqa → merchant's system (signed with HMAC-SHA256).
+model WebhookEndpoint {
+  id            String            @id @default(cuid())
+  merchantId    String
+  url           String
+  /// AES-256-GCM encrypted signing secret.
+  secretEnc     String
+  events        String[]          @default(["score.created"])
+  active        Boolean           @default(true)
+  failureStreak Int               @default(0)
+  createdAt     DateTime          @default(now())
+  merchant      Merchant          @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  deliveries    WebhookDelivery[]
+
+  @@index([merchantId])
+}
+
+enum DeliveryStatus {
+  pending
+  delivered
+  failed
+}
+
+model WebhookDelivery {
+  id             String          @id @default(cuid())
+  endpointId     String
+  event          String
+  /// Never contains a phone number.
+  payload        Json
+  status         DeliveryStatus  @default(pending)
+  attempts       Int             @default(0)
+  nextAttemptAt  DateTime        @default(now())
+  responseStatus Int?
+  lastError      String?
+  deliveredAt    DateTime?
+  createdAt      DateTime        @default(now())
+  endpoint       WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([endpointId, createdAt])
+}
+
+/// CSV column mappings remembered per merchant and file layout (header signature),
+/// so the second import of the same carrier export is one click.
+model CsvMapping {
+  id              String        @id @default(cuid())
+  merchantId      String
+  headerSignature String
+  mapping         Json
+  sourceType      OutcomeSource
+  defaultCarrier  String?
+  updatedAt       DateTime      @updatedAt
+  merchant        Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([merchantId, headerSignature])
 }

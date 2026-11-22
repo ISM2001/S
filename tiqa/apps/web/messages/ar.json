@@ -36,7 +36,8 @@
     "upload": "استيراد النتائج",
     "history": "السجل",
     "apiKeys": "مفاتيح API",
-    "team": "الفريق"
+    "team": "الفريق",
+    "integrations": "الربط"
   },
   "bands": {
     "low": "خطر ضعيف",
@@ -107,7 +108,9 @@
       "UNKNOWN_STATUS": "حالة غير معروفة",
       "INVALID_DATE": "تاريخ غير صالح",
       "MISSING_VALUE": "قيمة ناقصة"
-    }
+    },
+    "savedMapping": "ربط الأعمدة محفوظ من آخر استيراد لهاد النوع ديال الملف.",
+    "template": "تحميل نموذج الملف"
   },
   "history": {
     "title": "سجل عمليات التحقق",
@@ -191,7 +194,14 @@
     "INVITE_INVALID": "هاد الدعوة ما بقاتش صالحة.",
     "CANNOT_REMOVE_YOURSELF": "ما تقدرش تحيد راسك.",
     "CANNOT_CHANGE_OWN_ROLE": "ما تقدرش تبدل الدور ديالك.",
-    "REQUEST_ALREADY_RESOLVED": "الطلب ديجا تعالج."
+    "REQUEST_ALREADY_RESOLVED": "الطلب ديجا تعالج.",
+    "PHONE_NOT_FOUND": "رقم الهاتف ما كاينش فالطلبية.",
+    "WEBHOOK_URL_INVALID": "رابط غير صالح.",
+    "WEBHOOK_URL_HTTPS_REQUIRED": "خاص الرابط يبدا بـ https://",
+    "WEBHOOK_URL_NOT_PUBLIC": "هاد العنوان ما متاحش للعموم.",
+    "TOO_MANY_ENDPOINTS": "5 روابط كحد أقصى.",
+    "SHOPIFY_SHOP_INVALID": "اسم متجر Shopify غير صالح.",
+    "SHOP_LINKED_TO_ANOTHER_ACCOUNT": "هاد المتجر مربوط بحساب Tiqa آخر."
   },
   "consumer": {
     "title": "المعطيات ديالك فشبكة Tiqa",
@@ -323,5 +333,60 @@
     },
     "dismissedTab": "متجاهلة",
     "actionedTab": "معالجة"
+  },
+  "integrations": {
+    "title": "الربط مع الأدوات",
+    "intro": "ربط المتجر ولا الأدوات ديالك باش كل طلبية تتحقق أوتوماتيكيا.",
+    "connected": "تم الربط بنجاح.",
+    "copy": "نسخ",
+    "copied": "تنسخ",
+    "generic": {
+      "title": "Webhook عام (أي أداة)",
+      "help": "صيفط الطلبيات لهاد الرابط السري من أي أداة (Google Sheets، n8n، Make، الموقع ديالك…). Tiqa كيجاوب بمستوى الخطر. إلا كانت الطلبية فيها حالة التوصيل (تسلمات، ترفضات…) كتتسجل كنتيجة.",
+      "create": "إنشاء الرابط",
+      "rotate": "تجديد الرابط",
+      "confirmRotate": "الرابط القديم غادي يوقف. نكملو؟",
+      "urlOnce": "نسخ هاد الرابط دابا: فيه مفتاح سري وما غاديش يبان مرة أخرى.",
+      "active": "نشط",
+      "lastEvent": "آخر استدعاء: {date}",
+      "never": "عمرو ما تستدعى",
+      "paths": "مسارات الحقول (اختياري، إلا ما كفاش الكشف الأوتوماتيكي)",
+      "phonePath": "الهاتف",
+      "refPath": "رقم الطلبية",
+      "statusPath": "الحالة",
+      "example": "مثال"
+    },
+    "outbound": {
+      "title": "Webhooks صادرة",
+      "help": "Tiqa كيصيفط نتيجة كل عملية تحقق (حدث score.created) للنظام ديالك، موقعة (Tiqa-Signature). عمر الرقم ما كيكون فالرسالة.",
+      "url": "رابط الاستقبال",
+      "add": "زيد",
+      "secretOnce": "سر التوقيع (كيبان مرة وحدة):",
+      "test": "جرب",
+      "testOk": "التجربة نجحات (HTTP {status})",
+      "testFail": "فشل: {error}",
+      "deliveries": "آخر الإرسالات",
+      "delete": "حذف",
+      "disabled": "موقف"
+    },
+    "shopify": {
+      "title": "Shopify",
+      "help": "كل طلبية جديدة كتتحقق وكتاخد علامة (مثلا « tiqa-risque-eleve ») فإدارة Shopify ديالك.",
+      "shop": "المتجر ديالك (xxx.myshopify.com)",
+      "connect": "ربط Shopify",
+      "codOnly": "غير الطلبيات بالدفع عند الاستلام",
+      "tag": "زيد علامة الخطر",
+      "notConfigured": "تطبيق Shopify باقي ما مفعلش فهاد الخادم.",
+      "disconnect": "فصل",
+      "inactive": "محذوف"
+    },
+    "youcan": {
+      "title": "YouCan",
+      "help": "كل طلبية جديدة فـ YouCan كتتحقق أوتوماتيكيا؛ النتيجة كتبان فسجل Tiqa (YouCan باقي ما وثقاتش العلامات على الطلبيات).",
+      "connect": "ربط YouCan",
+      "store": "متجر YouCan",
+      "subscriptionError": "الاشتراك فالطلبيات فشل: عاود ربط المتجر.",
+      "notConfigured": "تطبيق YouCan باقي ما مفعلش فهاد الخادم."
+    }
   }
 }

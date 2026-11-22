@@ -1,5 +1,6 @@
 import { parse } from "csv-parse/sync";
 import { mapOutcomeStatus, normalizeCarrier, normalizeCity, normalizeMoroccanPhone, type CsvImportRequest } from "@tiqa/core";
+import { sha256 } from "@tiqa/core";
 import { badRequest } from "../lib/errors";
 import type { OutcomeRow } from "./outcomes";
 
@@ -128,4 +129,9 @@ export function mapCsvRows(
     });
   });
   return { rows, skipped, errors };
+}
+
+/** Identifies a file layout (same columns, any order) so a mapping can be remembered. */
+export function headerSignature(headers: string[]): string {
+  return sha256([...headers].map((h) => h.trim().toLowerCase()).sort().join("\n")).toString("hex");
 }

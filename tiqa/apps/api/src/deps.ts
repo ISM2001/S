@@ -10,4 +10,6 @@ export interface Deps {
   env: Env;
   mailer: Mailer;
   sms: SmsSender;
+  /** Outbound HTTP (injectable for tests). */
+  fetch?: typeof fetch;
 }

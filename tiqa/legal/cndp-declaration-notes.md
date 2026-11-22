@@ -13,7 +13,8 @@
 7. **Access right scope:** the portal shows a person their records (month, outcome, city, carrier) but **not which stores** reported them (to protect merchants and prevent retaliation). Is this compatible with the right to know the *source* of the data?
 8. **Audit logs after deletion:** when a deletion is upheld, audit log entries keep the pseudonymous hash until audit retention ends (24 months planned). Acceptable as a legal obligation / accountability record?
 9. **SMS OTP provider:** a provider will process phone numbers to send codes (sub-processor; location?).
-10. **Automated decisions:** is a risk band shown to a merchant an "automated decision" under Moroccan law? We position it as decision support only.
+10. **Platform integrations:** with Shopify/YouCan installs, Tiqa receives orders directly from the platform (phone included) and scores them automatically. The merchant's duty to inform customers (consumer notice) must cover this. Shopify additionally requires its own data-protection review for phone access.
+11. **Automated decisions:** is a risk band shown to a merchant an "automated decision" under Moroccan law? We position it as decision support only.
 
 ## Processing description (as built)
 | Item | Value |

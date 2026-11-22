@@ -9,6 +9,9 @@ type Field = (typeof FIELDS)[number];
 type Mapping = Partial<Record<Field, string>>;
 
 interface Preview {
+  mapping_source?: "saved" | "guessed";
+  source_type?: "merchant_manual" | "carrier_export" | null;
+  default_carrier?: string | null;
   headers: string[];
   suggested_mapping: Mapping;
   sample: Record<string, string>[];
@@ -63,6 +66,8 @@ export default function UploadPage() {
       const p = await api<Preview>("/app/outcomes/csv/preview", { body: { csv: text } });
       setPreview(p);
       setMapping(p.suggested_mapping);
+      if (p.source_type) setSourceType(p.source_type);
+      if (p.default_carrier) setDefaultCarrier(p.default_carrier);
     } catch (e) {
       setError(errMsg(e));
     }
@@ -97,6 +102,7 @@ export default function UploadPage() {
           <label className="label" htmlFor="file">{t("chooseFile")}</label>
           <input id="file" type="file" accept=".csv,text/csv" className="text-sm" onChange={(e) => onFile(e.target.files?.[0])} />
           <p className="mt-1 text-xs text-slate-500">{t("excelHint")} {t("statusHelp")}</p>
+          <a className="mt-1 inline-block text-xs text-brand-700 hover:underline" href="/api/app/outcomes/csv/template">{t("template")}</a>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -119,6 +125,7 @@ export default function UploadPage() {
             <h2 className="font-semibold">{t("mapping")}</h2>
             <span className="text-sm text-slate-500">{t("rows", { count: preview.total_rows })}</span>
           </div>
+          {preview.mapping_source === "saved" && <p className="rounded bg-brand-50 p-2 text-sm text-brand-900">{t("savedMapping")}</p>}
           <div className="grid gap-3 sm:grid-cols-3">
             {FIELDS.map((f) => (
               <div key={f}>
