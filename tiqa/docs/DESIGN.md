@@ -1,7 +1,29 @@
 # Tiqa: design proposal (v0, for approval)
 
-> Status: **DRAFT, waiting for founder approval.** No code has been written yet.
+> Status: **APPROVED 2026-11-22** with the decisions below. Phase 0–1 implemented.
 > Legal statements in this document are engineering assumptions, not legal advice. Everything marked ⚖️ needs review by a Moroccan lawyer.
+
+## Decisions (approved 2026-11-22)
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Repository | Tiqa gets its **own new repo** (staged in `tiqa/` until it exists). |
+| 2 | "returned" vs "refused" | **Same weight** (1.0). unreachable = 0.5. |
+| 3 | Exact counts | **Grouped counts** in the API: outcomes `0, 1-2, 3-5, 6-10, 11+`, merchants `0, 1, 2-3, 4-5, 6+`. |
+| 4 | City in the score | **No.** Stored coarse (city code only) for the merchant's own stats. |
+| 5 | Thresholds | As proposed: N = 3, ≥ 2 merchants, evidence ≥ 1.0, half-life 90 days, prior 25% (k = 4), bands 20% / 40%. |
+| 6 | Deletion requests | Freeze immediately, admin review, delete if upheld (Phase 2, pending lawyer). |
+| 7 | Paid services | **None for now.** Email = Mailpit locally (console fallback). SMS OTP = console stub. Hosting decided later. |
+| 8 | Pricing | Placeholder plans: Free (200 lookups/month), Starter 199 MAD (2,000), Pro 599 MAD (10,000). |
+| 9 | Darija | A few friendly Darija phrases in Arabic script inside the Arabic UI. |
+| 10 | Seed numbers | Documented fake blocks `0600000000–0600099999` (demo) and `07xxxxxxxx` (load test), dev pepper only, seed refuses production. |
+
+### Simplifications vs. the original proposal (keep it simple)
+* **No job queue yet.** The worker is a plain daily timer (retention). BullMQ can come later if jobs multiply.
+* **CSV import is synchronous** (≤ 50,000 rows / 10 MB per file). 50k rows import in a few seconds.
+* **Scoring config lives in code** (`packages/scoring` `DEFAULT_CONFIG`, versioned `v1.0`, recorded on every lookup). A DB-backed config table can come with the admin panel.
+* **Trust weights** exist in the schema and are applied by the scorer. The job that *computes* them ships in Phase 2.
+* `packages/core` was added (phone normalization, HMAC, CSV status mapping, Zod schemas).
 
 ---
 
@@ -190,7 +212,7 @@ n = 3.708, r = 0.238 → p = (0.238 + 1) / (3.708 + 4) = **0.161 → score 16, b
 
 **C. Poisoning attempt: store X reports 20 "refused" in 20 days; stores Y and Z have 3 carrier-backed deliveries**
 * X raw weight 11.08 is capped to 2.0 (scale 0.181). Y = 1.720, Z = 0.686.
-* n = 4.405, r = 2.000 → p = **0.357 → score 36, MEDIUM** (without the cap: p ≈ 0.78, HIGH)
+* n = 4.405, r = 2.000 → p = **0.357 → score 36, MEDIUM** (without the cap: p = 0.691, HIGH)
 * Once the trust job drops X to t = 0.3 (carrier data contradicts X's refusals), X's cap becomes 0.6 → n = 3.005, r = 0.600 → p = **0.228 → score 23, MEDIUM, close to LOW**
 * If X were the **only** reporter: merchants = 1 → **INSUFFICIENT_DATA**. A single store can never mark anyone on its own.
 

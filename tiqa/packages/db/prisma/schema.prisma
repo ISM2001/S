@@ -1,0 +1,282 @@
+// Tiqa database schema.
+// Privacy rules enforced here:
+//   - No raw phone numbers anywhere. Shared network = HMAC hash only; merchant history = last 2 digits.
+//   - No names, addresses, product details or order amounts.
+//   - Money is stored in integer centimes (MAD).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Tenancy & auth ───────────────────────────────────────────────────────────
+
+enum MerchantStatus {
+  active
+  suspended
+}
+
+enum Role {
+  owner
+  admin
+  member
+}
+
+model Merchant {
+  id                      String         @id @default(cuid())
+  name                    String
+  status                  MerchantStatus @default(active)
+  /// Computed by the trust job (Phase 2). 0..1. New merchants start at 1.
+  trustWeight             Float          @default(1.0)
+  /// Admin override; wins over trustWeight when set.
+  trustOverride           Float?
+  /// Cost of one failed COD delivery (shipping both ways, packaging, call), used for the "money saved" estimate.
+  failedOrderCostCentimes Int            @default(4000)
+  /// Merchant accepted the terms, incl. the duty to inform customers that order data is shared for delivery-risk prevention.
+  termsAcceptedAt         DateTime?
+  termsVersion            String?
+  isSeed                  Boolean        @default(false)
+  createdAt               DateTime       @default(now())
+
+  memberships  Membership[]
+  apiKeys      ApiKey[]
+  outcomes     Outcome[]
+  lookups      Lookup[]
+  usage        UsageMonthly[]
+  subscription Subscription?
+  csvImports   CsvImport[]
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  /// argon2id. Null when the user only signs in with magic links.
+  passwordHash    String?
+  locale          String    @default("fr")
+  emailVerifiedAt DateTime?
+  isStaff         Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  memberships Membership[]
+  sessions    Session[]
+  magicLinks  MagicLink[]
+}
+
+model Membership {
+  userId     String
+  merchantId String
+  role       Role     @default(member)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@id([userId, merchantId])
+}
+
+model Session {
+  /// sha256 of the session token (the cookie holds the raw token).
+  idHash    Bytes    @id
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model MagicLink {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash Bytes     @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  merchantId String
+  name       String
+  /// Public part of the key, used to look it up.
+  prefix     String    @unique
+  /// sha256 of the secret part.
+  secretHash Bytes
+  scopes     String[]  @default(["score", "outcomes:write"])
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdBy  String?
+  createdAt  DateTime  @default(now())
+  merchant   Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+}
+
+// ── Shared network: the ONLY cross-merchant data ─────────────────────────────
+
+enum OutcomeType {
+  delivered
+  refused
+  returned
+  unreachable
+}
+
+enum OutcomeSource {
+  carrier_api
+  carrier_export
+  merchant_manual
+}
+
+enum RecordStatus {
+  active
+  /// Disputed by the consumer; excluded from scoring until reviewed.
+  frozen
+}
+
+model Outcome {
+  id               String        @id @default(cuid())
+  phoneHash        Bytes
+  hashKeyVersion   Int           @default(1)
+  /// Never exposed to other merchants.
+  merchantId       String
+  outcome          OutcomeType
+  source           OutcomeSource @default(merchant_manual)
+  carrier          String?
+  /// Coarse city code only (see packages/core/src/cities.ts).
+  cityCode         String?
+  occurredAt       DateTime
+  /// The merchant's own order reference, used for de-duplication and to update a status.
+  merchantOrderRef String?
+  status           RecordStatus  @default(active)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  merchant         Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([merchantId, merchantOrderRef])
+  @@index([phoneHash, occurredAt])
+  @@index([occurredAt])
+  @@index([merchantId, createdAt])
+}
+
+// ── Merchant-private ─────────────────────────────────────────────────────────
+
+enum Band {
+  low
+  medium
+  high
+  insufficient_data
+}
+
+enum LookupDecision {
+  shipped
+  cancelled
+  prepaid_required
+}
+
+/// One row per score request. Powers the merchant's "order history with bands".
+model Lookup {
+  id               String          @id @default(cuid())
+  merchantId       String
+  phoneHash        Bytes
+  /// Only the last 2 digits, for display ("06 •• •• •• 12").
+  phoneLast2       String
+  merchantOrderRef String?
+  band             Band
+  score            Int?
+  outcomesBucket   String
+  merchantsBucket  String
+  scoreVersion     String
+  channel          String          @default("api")
+  /// What the merchant did with the order (merchant-private; feeds the money-saved estimate; never shared).
+  decision         LookupDecision?
+  createdAt        DateTime        @default(now())
+  merchant         Merchant        @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId, createdAt])
+  @@index([merchantId, phoneHash])
+}
+
+model CsvImport {
+  id          String   @id @default(cuid())
+  merchantId  String
+  userId      String?
+  sourceType  OutcomeSource
+  rowsTotal   Int
+  inserted    Int
+  updated     Int
+  skipped     Int
+  failed      Int
+  /// Per-row errors (row number + error code only; never the phone number).
+  errors      Json
+  createdAt   DateTime @default(now())
+  merchant    Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId, createdAt])
+}
+
+// ── Compliance ───────────────────────────────────────────────────────────────
+
+enum ActorType {
+  api_key
+  user
+  staff
+  consumer
+  system
+}
+
+/// Append-only audit trail. Every lookup is recorded (merchant, hashed id, time, result).
+model AuditLog {
+  id         BigInt    @id @default(autoincrement())
+  at         DateTime  @default(now())
+  actorType  ActorType
+  actorId    String?
+  merchantId String?
+  action     String
+  phoneHash  Bytes?
+  result     Json?
+
+  @@index([merchantId, at])
+  @@index([phoneHash])
+  @@index([at])
+}
+
+// ── Billing (payments stubbed until Phase 4) ─────────────────────────────────
+
+model Plan {
+  id                       String         @id @default(cuid())
+  code                     String         @unique
+  nameFr                   String
+  nameAr                   String
+  monthlyFeeCentimes       Int
+  includedLookups          Int
+  overageCentimesPerLookup Int
+  rateLimitPerMin          Int
+  subscriptions            Subscription[]
+}
+
+model Subscription {
+  merchantId         String   @id
+  planId             String
+  status             String   @default("active")
+  currentPeriodStart DateTime @default(now())
+  merchant           Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  plan               Plan     @relation(fields: [planId], references: [id])
+}
+
+model UsageMonthly {
+  merchantId        String
+  /// "YYYY-MM"
+  period            String
+  lookups           Int      @default(0)
+  outcomesSubmitted Int      @default(0)
+  merchant          Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@id([merchantId, period])
+}

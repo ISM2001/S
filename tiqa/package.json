@@ -1,0 +1,22 @@
+{
+  "name": "tiqa",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @tiqa/api --filter @tiqa/web dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r --workspace-concurrency=1 test",
+    "typecheck": "pnpm -r typecheck",
+    "db:migrate": "pnpm --filter @tiqa/db migrate:dev",
+    "db:deploy": "pnpm --filter @tiqa/db migrate:deploy",
+    "db:seed": "pnpm --filter @tiqa/db seed",
+    "db:reset": "pnpm --filter @tiqa/db reset"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.5",
+    "tsx": "^4.20.0"
+  }
+}

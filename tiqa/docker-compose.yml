@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tiqa
+      POSTGRES_PASSWORD: tiqa
+      POSTGRES_DB: tiqa
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/01-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tiqa"]
+      interval: 5s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports: ["8025:8025", "1025:1025"]
+volumes:
+  pgdata:
