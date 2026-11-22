@@ -37,7 +37,8 @@
     "history": "Historique",
     "apiKeys": "Clés API",
     "team": "Équipe",
-    "integrations": "Intégrations"
+    "integrations": "Intégrations",
+    "billing": "Facturation"
   },
   "bands": {
     "low": "Risque faible",
@@ -201,7 +202,14 @@
     "WEBHOOK_URL_NOT_PUBLIC": "Cette adresse n'est pas accessible publiquement.",
     "TOO_MANY_ENDPOINTS": "5 URLs maximum.",
     "SHOPIFY_SHOP_INVALID": "Nom de boutique Shopify invalide.",
-    "SHOP_LINKED_TO_ANOTHER_ACCOUNT": "Cette boutique est déjà liée à un autre compte Tiqa."
+    "SHOP_LINKED_TO_ANOTHER_ACCOUNT": "Cette boutique est déjà liée à un autre compte Tiqa.",
+    "QUOTA_EXCEEDED": "Quota de votre offre gratuite atteint ce mois-ci. Passez à une offre payante pour continuer.",
+    "BILLING_PROFILE_REQUIRED": "Renseignez d'abord vos informations de facturation.",
+    "MFA_CODE_INVALID": "Code incorrect ou déjà utilisé.",
+    "MFA_REQUIRED": "Double authentification requise.",
+    "MFA_SETUP_REQUIRED": "Configurez d'abord la double authentification.",
+    "BAD_ORIGIN": "Requête refusée.",
+    "PERIOD_NOT_CLOSED": "Ce mois n'est pas terminé."
   },
   "consumer": {
     "title": "Vos données dans le réseau Tiqa",
@@ -279,7 +287,8 @@
     "nav": {
       "requests": "Demandes",
       "merchants": "Marchands",
-      "flags": "Alertes"
+      "flags": "Alertes",
+      "invoices": "Factures"
     },
     "overview": "{requests} demandes ouvertes · {flags} alertes ouvertes · {merchants} marchands ({low} à confiance basse)",
     "open": "Ouvertes",
@@ -332,7 +341,25 @@
       "merchant_manual": "Saisie boutique"
     },
     "dismissedTab": "Ignorées",
-    "actionedTab": "Traitées"
+    "actionedTab": "Traitées",
+    "mfa": {
+      "title": "Double authentification",
+      "setupHelp": "Scannez ce QR code avec une application d'authentification (Google Authenticator, Microsoft Authenticator…), puis saisissez le code à 6 chiffres.",
+      "secret": "Clé (saisie manuelle)",
+      "code": "Code à 6 chiffres",
+      "verify": "Vérifier",
+      "requiredHelp": "Saisissez le code de votre application d'authentification.",
+      "start": "Configurer"
+    },
+    "invoices": {
+      "runBilling": "Générer les factures du mois précédent",
+      "markPaid": "Marquer payée",
+      "reference": "Référence du paiement",
+      "cancel": "Annuler (avoir)",
+      "cancelReason": "Motif de l'annulation",
+      "overdue": "En retard",
+      "result": "{issued} émises, {skipped} ignorées"
+    }
   },
   "integrations": {
     "title": "Intégrations",
@@ -388,5 +415,58 @@
       "subscriptionError": "Abonnement aux commandes échoué : reconnectez la boutique.",
       "notConfigured": "Application YouCan pas encore activée sur ce serveur."
     }
+  },
+  "billing": {
+    "title": "Facturation",
+    "plan": "Votre offre",
+    "usage": "Ce mois-ci ({period})",
+    "lookupsUsed": "{used} vérifications / {included} incluses",
+    "perMonth": "{price} MAD HT / mois",
+    "free": "Gratuit",
+    "included": "{n} vérifications incluses",
+    "overage": "puis {price} MAD HT / vérification",
+    "noOverage": "bloqué au-delà du quota",
+    "current": "Offre actuelle",
+    "choose": "Choisir",
+    "estimate": "Estimation du mois (TTC)",
+    "vat": "TVA {rate}%",
+    "profile": "Informations de facturation",
+    "legalName": "Raison sociale",
+    "ice": "ICE (15 chiffres)",
+    "address": "Adresse",
+    "city": "Ville",
+    "email": "E-mail de facturation",
+    "profileHelp": "Obligatoire pour les offres payantes : ces informations figurent sur vos factures.",
+    "invoices": "Factures",
+    "noInvoices": "Aucune facture.",
+    "number": "N°",
+    "period": "Période",
+    "amount": "Montant TTC",
+    "status": "Statut",
+    "view": "Voir",
+    "statuses": {
+      "issued": "À payer",
+      "paid": "Payée",
+      "cancelled": "Annulée (avoir)",
+      "overdue": "En retard"
+    },
+    "payment": "Paiement par virement bancaire",
+    "paymentHelp": "Indiquez le numéro de facture en référence du virement.",
+    "bank": "Banque",
+    "rib": "RIB",
+    "printTitle": "Facture",
+    "seller": "Émetteur",
+    "buyer": "Client",
+    "issued": "Date d'émission",
+    "due": "Échéance",
+    "designation": "Désignation",
+    "qty": "Qté",
+    "unit": "P.U. HT",
+    "total": "Total HT",
+    "subtotal": "Total HT",
+    "totalTtc": "Total TTC",
+    "print": "Imprimer / PDF",
+    "creditNote": "Annulée par l'avoir {n}",
+    "draftNotice": "Mentions légales de l'émetteur à compléter avant mise en production."
   }
 }

@@ -6,6 +6,7 @@ import { ApiError } from "./lib/errors";
 import { authRoutes } from "./routes/auth";
 import { dashboardRoutes } from "./routes/dashboard";
 import { adminRoutes } from "./routes/admin";
+import { billingRoutes } from "./routes/billing";
 import { consumerRoutes } from "./routes/consumer";
 import { integrationRoutes } from "./routes/integrations";
 import { shopifyRoutes } from "./routes/shopify";
@@ -61,6 +62,25 @@ export async function buildApp(deps: Deps, opts: { logger?: FastifyServerOptions
     return reply.code(500).send({ error: { code: "INTERNAL_ERROR" }, request_id: req.id });
   });
 
+  // ── Hardening ──────────────────────────────────────────────────────────
+  const allowedOrigins = new Set([new URL(deps.env.WEB_URL).origin, new URL(deps.env.API_PUBLIC_URL).origin]);
+  const browserScoped = (url: string) => url.startsWith("/app/") || url.startsWith("/admin/") || url.startsWith("/public/");
+  app.addHook("onRequest", async (req, reply) => {
+    // CSRF defence in depth (on top of SameSite cookies + JSON-only bodies): state-changing browser requests
+    // must come from our own web origin. Server-to-server calls (no Origin header) are unaffected.
+    if (req.method !== "GET" && req.method !== "HEAD" && browserScoped(req.url)) {
+      const origin = req.headers.origin;
+      if (origin && !allowedOrigins.has(origin)) return reply.code(403).send({ error: { code: "BAD_ORIGIN" }, request_id: req.id });
+    }
+  });
+  app.addHook("onSend", async (req, reply) => {
+    reply.header("x-content-type-options", "nosniff");
+    reply.header("referrer-policy", "no-referrer");
+    reply.header("x-frame-options", "DENY");
+    if (browserScoped(req.url)) reply.header("cache-control", "no-store");
+    if (deps.env.NODE_ENV === "production") reply.header("strict-transport-security", "max-age=31536000; includeSubDomains");
+  });
+
   app.get("/health", async () => {
     await deps.prisma.$queryRaw`SELECT 1`;
     await deps.redis.ping();
@@ -76,6 +96,7 @@ export async function buildApp(deps: Deps, opts: { logger?: FastifyServerOptions
   await app.register(integrationRoutes, { deps, network });
   await app.register(shopifyRoutes, { deps, network });
   await app.register(youcanRoutes, { deps, network });
+  await app.register(billingRoutes, { deps });
 
   return app;
 }

@@ -3,12 +3,14 @@
 **Shared delivery-risk network for cash-on-delivery e-commerce in Morocco.**
 Sellers send an order's phone number and get back a risk band in milliseconds, based on delivery outcomes from every seller in the network ("give data to get data").
 
-> Status: **Phase 3 done**: API, scoring, CSV import (remembered mappings), dashboard (FR + AR/RTL), consumer rights portal, admin panel, trust weights & anomaly flags, team invites, integrations (generic webhook in/out, Shopify app stub, YouCan app).
+> Status: **Phase 4 done** (billing in MAD, staff 2FA, key rotation, deploy images, runbook). Earlier phases: API, scoring, CSV import (remembered mappings), dashboard (FR + AR/RTL), consumer rights portal, admin panel, trust weights & anomaly flags, team invites, integrations (generic webhook in/out, Shopify app stub, YouCan app).
 > ⚖️ No real customer data before the CNDP filing, lawyer review of [`/legal`](legal/README.md) and the consumer rights portal (Phase 2).
 
 - Design, data model, scoring formula, decisions: [`docs/DESIGN.md`](docs/DESIGN.md)
 - API reference: [`docs/API.md`](docs/API.md)
 - Integrations (Shopify, YouCan, carriers): research findings & status: [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md)
+- Operations runbook (deploy, secrets, pepper rotation, backups, incidents, go-live checklist): [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
+- Payment options in Morocco (research, decision pending): [`docs/PAYMENTS.md`](docs/PAYMENTS.md)
 
 ---
 
@@ -31,7 +33,7 @@ Then open **http://localhost:3000** and sign in with **`demo@tiqa.test` / `demo-
 | Who | Where | Login |
 |---|---|---|
 | Merchant (Demo Store, owner) | http://localhost:3000/dashboard | `demo@tiqa.test` / `demo-password-123` |
-| Tiqa staff (admin panel) | http://localhost:3000/admin | `admin@tiqa.test` / `admin-password-123` |
+| Tiqa staff (admin panel) | http://localhost:3000/admin | `admin@tiqa.test` / `admin-password-123`, then set up **2FA** with any authenticator app (mandatory) |
 | Consumer (rights portal) | http://localhost:3000/consumer | any fake number below; the SMS code is **printed in the API console** (`[sms:console]`) |
 
 Try these fake numbers in **Vérifier un numéro**:
@@ -133,9 +135,19 @@ pnpm --filter @tiqa/api job:trust
 
 To enable Shopify/YouCan locally, set `SHOPIFY_API_KEY/SECRET` or `YOUCAN_CLIENT_ID/SECRET` in `.env` (from the Shopify Partner Dashboard / YouCan Partners), and make `API_PUBLIC_URL` reachable from the internet (e.g. a tunnel) so the platforms can call back.
 
+## Billing (Phase 4)
+
+- Plans in MAD (placeholder prices in the seed): **Gratuit** (200 lookups/month, blocked beyond), **Starter** 199 MAD HT (2,000 + 0.15 MAD/extra), **Pro** 599 MAD HT (10,000 + 0.08 MAD/extra).
+- Dashboard → **Facturation**: usage, plan change (owner), billing profile (legal name + ICE), invoices (printable / PDF via the browser).
+- The worker issues last month's invoices (gapless `FAC-YYYY-NNNNN`, VAT 20%). Staff mark them paid (bank transfer) or cancel with a credit note.
+
+## Deploy
+
+See `docs/OPERATIONS.md`, `apps/api/Dockerfile`, `apps/web/Dockerfile`, `docker-compose.prod.example.yml`.
+
 ## Roadmap
 
 - ~~Phase 2~~ done.
-- **Before any real data**: lawyer review of `/legal`, CNDP filing, SMS provider, 2FA for staff accounts, hosting decision.
+- **Before any real data**: see the go-live checklist in docs/OPERATIONS.md.
 - ~~Phase 3~~ done (see docs/INTEGRATIONS.md for what still needs Shopify/YouCan accounts and reviews).
-- **Phase 4**: billing (usage in MAD), payments (CMI etc., to evaluate), hardening (KMS, load tests, backups).
+- ~~Phase 4~~ done. Open decisions: payment gateway (docs/PAYMENTS.md), SMS provider, hosting.

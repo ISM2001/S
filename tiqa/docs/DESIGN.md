@@ -1,6 +1,6 @@
 # Tiqa: design proposal (v0, for approval)
 
-> Status: **APPROVED 2026-11-22** with the decisions below. Phases 0–3 implemented.
+> Status: **APPROVED 2026-11-22** with the decisions below. Phases 0–4 implemented.
 > Legal statements in this document are engineering assumptions, not legal advice. Everything marked ⚖️ needs review by a Moroccan lawyer.
 
 ## Decisions (approved 2026-11-22)
@@ -31,7 +31,11 @@
 * **Trust** = contradiction component × 0.85^(upheld disputes, 12 months) × open-flag factors (low 0.95, medium 0.8, high 0.5), clamped to [0.1, 1]. Only *open* flags penalize. Once a human dismisses one, the same kind is not re-raised for 30 days.
 * **Deletion upheld:** outcomes deleted. Merchants' lookup rows are kept but unlinked (hash replaced with random bytes). OTPs and sessions are deleted, and the request keeps no phone hash. **Audit logs keep the hash** until their own retention ends (⚖️ to confirm).
 * **Phase 3:** see `docs/INTEGRATIONS.md`. Platform tokens and webhook secrets are AES-256-GCM encrypted (`INTEGRATION_ENC_KEY`). Outbound URLs are SSRF-checked (https + public IPs only in production). Outbound payloads never contain phone numbers.
-* **Not done yet (before go-live):** TOTP 2FA for staff accounts, real SMS provider, a merchant switcher for users who belong to several stores (today the first membership is used).
+* **Phase 4:**
+  * Billing: invoices are computed by a pure function (fee + overage, VAT rounded once on the subtotal), with gapless numbering via a counter row updated inside the invoice transaction. Invoices and credit notes are never edited or deleted. The plan used is the one active at invoicing time (no proration yet).
+  * Security: TOTP 2FA mandatory for staff (RFC 6238, secret encrypted, codes single-use). Origin check on browser-facing state-changing routes. Security headers. Dependency audit clean (two transitive Prisma tooling packages pinned via pnpm overrides).
+  * Pepper rotation: old peppers stay configured and records are re-keyed when the number is seen again (`docs/OPERATIONS.md`).
+* **Still open:** real SMS/email providers, payment gateway, hosting; re-encryption tooling for `INTEGRATION_ENC_KEY`; a merchant switcher for users who belong to several stores (today the first membership is used).
 
 ---
 

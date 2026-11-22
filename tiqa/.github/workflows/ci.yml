@@ -29,6 +29,7 @@ jobs:
           cache: pnpm
       - run: cp .env.example .env
       - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm --filter @tiqa/web build

@@ -7,6 +7,8 @@ import { getContribution } from "./contribution";
 import type { Network } from "./network";
 import { hit } from "./rate-limit";
 import { emitEvent } from "./webhooks-out";
+import { checkQuota } from "./billing";
+import { ApiError } from "../lib/errors";
 
 export type LookupChannel = "api" | "dashboard" | "webhook" | "shopify" | "youcan";
 
@@ -31,7 +33,10 @@ export async function performLookup(
 ): Promise<{ response: ScoreResponse; rateRemaining: number }> {
   const contribution = await getContribution(deps, args.merchantId);
   const { remaining } = await hit(deps.redis, `lookup:${args.merchantId}`, contribution.limitPerMin);
+  const quota = await checkQuota(deps.prisma, args.merchantId, period());
+  if (quota.blocked) throw new ApiError(402, "QUOTA_EXCEEDED", "QUOTA_EXCEEDED", { included_lookups: quota.included });
 
+  await network.migrateToCurrentKey([args.e164]);
   const hash = network.hash(args.e164);
   const result = await network.scoreHash(hash);
 

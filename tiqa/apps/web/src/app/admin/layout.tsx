@@ -4,32 +4,35 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { StaffMfa } from "@/components/StaffMfa";
 import { api, ApiError } from "@/lib/api";
 
-const NAV = [["/admin", "requests"], ["/admin/merchants", "merchants"], ["/admin/flags", "flags"]] as const;
+const NAV = [["/admin", "requests"], ["/admin/merchants", "merchants"], ["/admin/flags", "flags"], ["/admin/invoices", "invoices"]] as const;
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("admin");
   const tc = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
-  const [state, setState] = useState<"loading" | "ok" | "forbidden">("loading");
+  const [state, setState] = useState<"loading" | "ok" | "forbidden" | "setup_required" | "required">("loading");
+  const [reload, setReload] = useState(0);
   const [overview, setOverview] = useState<{ open_requests: number; open_flags: number; merchants: number; low_trust_merchants: number } | null>(null);
 
   useEffect(() => {
-    api("/admin/me")
-      .then(() => {
-        setState("ok");
-        return api<typeof overview>("/admin/overview").then(setOverview);
+    api<{ mfa: "ok" | "setup_required" | "required" }>("/admin/me")
+      .then((me) => {
+        setState(me.mfa);
+        if (me.mfa === "ok") return api<typeof overview>("/admin/overview").then(setOverview);
       })
       .catch((e) => {
         if (e instanceof ApiError && e.status === 401) router.replace("/login");
         else setState("forbidden");
       });
-  }, [router, pathname]);
+  }, [router, pathname, reload]);
 
   if (state === "loading") return <div className="p-8 text-sm text-slate-500">{tc("loading")}</div>;
   if (state === "forbidden") return <div className="p-8 text-sm text-red-700">{t("notStaff")}</div>;
+  if (state === "setup_required" || state === "required") return <StaffMfa mode={state} onDone={() => setReload((x) => x + 1)} />;
 
   return (
     <div className="min-h-screen">

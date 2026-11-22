@@ -2,6 +2,7 @@ import { prisma } from "@tiqa/db";
 import { loadEnv } from "./env";
 import { runRetention } from "./jobs/retention";
 import { runTrustJob } from "./jobs/trust";
+import { generateInvoices, previousPeriod } from "./services/billing";
 import { retryDueDeliveries } from "./services/webhooks-out";
 import { Redis } from "ioredis";
 
@@ -10,6 +11,7 @@ import { Redis } from "ioredis";
  *  - retention: daily
  *  - trust weights + anomaly flags: hourly
  *  - outbound webhook retries: every minute
+ *  - invoices for the previous month: daily (idempotent)
  */
 const env = loadEnv();
 const HOUR = 3_600_000;
@@ -37,9 +39,14 @@ const webhooks = async () => {
   }
 };
 
+// Invoices for the previous month (idempotent, so running it daily is safe; it issues on the 1st).
+const billing = () => job("billing", () => generateInvoices(prisma, env, previousPeriod()));
+
 await retention();
+await billing();
 await trust();
 setInterval(retention, 24 * HOUR);
+setInterval(billing, 24 * HOUR);
 setInterval(trust, HOUR);
 setInterval(webhooks, 60_000);
-console.log("worker started: retention daily, trust hourly, webhook retries every minute");
+console.log("worker started: retention + billing daily, trust hourly, webhook retries every minute");

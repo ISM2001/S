@@ -39,6 +39,7 @@ export async function ingestOutcomes(
   const result: IngestResult = { inserted: 0, updated: 0, unchanged: 0 };
   if (!rows.length) return result;
 
+  await network.migrateToCurrentKey(rows.map((r) => r.e164));
   // Last write wins within a batch for the same order ref.
   const byRef = new Map<string, { hashHex: string; row: OutcomeRow }>();
   for (const row of rows) {

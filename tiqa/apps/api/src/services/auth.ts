@@ -1,5 +1,5 @@
 import { hash as argonHash, verify as argonVerify } from "@node-rs/argon2";
-import { parseApiKey, randomToken, safeEqual, sha256 } from "@tiqa/core";
+import { parseApiKey, randomToken, safeEqual, sha256, type Bytes } from "@tiqa/core";
 import type { Role } from "@tiqa/db";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Deps } from "../deps";
@@ -71,14 +71,24 @@ export async function requireSession(deps: Deps, req: FastifyRequest): Promise<S
   };
 }
 
-/** Tiqa staff (admin panel). Staff accounts don't need a merchant membership. */
-export async function requireStaff(deps: Deps, req: FastifyRequest): Promise<{ userId: string; email: string }> {
+/**
+ * Tiqa staff (admin panel). Staff accounts don't need a merchant membership.
+ * Two-factor (TOTP) is mandatory: the session must have passed the second factor (unless allowNoMfa, used by the MFA setup endpoints).
+ */
+export async function requireStaff(
+  deps: Deps,
+  req: FastifyRequest,
+  opts: { allowNoMfa?: boolean } = {},
+): Promise<{ userId: string; email: string; sessionIdHash: Bytes; mfaEnabled: boolean; mfaVerified: boolean; totpSecretEnc: string | null }> {
   const token = req.cookies[SESSION_COOKIE];
   if (!token) throw unauthorized();
   const session = await deps.prisma.session.findUnique({ where: { idHash: sha256(token) }, include: { user: true } });
   if (!session || session.expiresAt < new Date()) throw unauthorized("SESSION_EXPIRED");
   if (!session.user.isStaff) throw forbidden("STAFF_ONLY");
-  return { userId: session.user.id, email: session.user.email };
+  const mfaEnabled = !!session.user.totpEnabledAt;
+  const mfaVerified = mfaEnabled && !!session.mfaAt;
+  if (deps.env.STAFF_MFA_REQUIRED && !opts.allowNoMfa && !mfaVerified) throw forbidden(mfaEnabled ? "MFA_REQUIRED" : "MFA_SETUP_REQUIRED");
+  return { userId: session.user.id, email: session.user.email, sessionIdHash: Buffer.from(session.idHash), mfaEnabled, mfaVerified, totpSecretEnc: session.user.totpSecretEnc };
 }
 
 export function requireRole(ctx: SessionContext, roles: Role[]) {

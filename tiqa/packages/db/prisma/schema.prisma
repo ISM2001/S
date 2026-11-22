@@ -43,6 +43,13 @@ model Merchant {
   termsAcceptedAt         DateTime?
   termsVersion            String?
   isSeed                  Boolean        @default(false)
+  /// Billing identity (required on Moroccan B2B invoices: legal name + ICE).
+  billingLegalName        String?
+  /// Identifiant Commun de l'Entreprise: 15 digits.
+  billingIce              String?
+  billingAddress          String?
+  billingCity             String?
+  billingEmail            String?
   createdAt               DateTime       @default(now())
 
   memberships  Membership[]
@@ -55,6 +62,7 @@ model Merchant {
   invites      Invite[]
   flags        AnomalyFlag[]
   integrations Integration[]
+  invoices     Invoice[]
   endpoints    WebhookEndpoint[]
   csvMappings  CsvMapping[]
 }
@@ -67,6 +75,9 @@ model User {
   locale          String    @default("fr")
   emailVerifiedAt DateTime?
   isStaff         Boolean   @default(false)
+  /// TOTP (RFC 6238) secret, AES-256-GCM encrypted. Mandatory for staff.
+  totpSecretEnc   String?
+  totpEnabledAt   DateTime?
   createdAt       DateTime  @default(now())
 
   memberships Membership[]
@@ -106,6 +117,8 @@ model Session {
   idHash    Bytes    @id
   userId    String
   expiresAt DateTime
+  /// When the second factor was verified in this session (staff).
+  mfaAt     DateTime?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -490,4 +503,53 @@ model CsvMapping {
   merchant        Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 
   @@unique([merchantId, headerSignature])
+}
+
+// ── Invoices (Phase 4). Payments are recorded manually (bank transfer) until a gateway is chosen. ──
+
+enum InvoiceStatus {
+  issued
+  paid
+  /// Cancelled by a credit note (avoir). Issued invoices are never deleted or renumbered.
+  cancelled
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  /// Gapless sequential number per year, e.g. FAC-2026-00001.
+  number            String        @unique
+  merchantId        String
+  /// Billing period "YYYY-MM".
+  period            String
+  status            InvoiceStatus @default(issued)
+  issuedAt          DateTime      @default(now())
+  dueAt             DateTime
+  /// [{label, quantity, unitCentimes, totalCentimes}]
+  lines             Json
+  subtotalCentimes  Int
+  /// VAT rate in basis points (2000 = 20%).
+  vatRateBp         Int
+  vatCentimes       Int
+  totalCentimes     Int
+  currency          String        @default("MAD")
+  /// Snapshots so a reissued profile never changes a past invoice.
+  seller            Json
+  buyer             Json
+  paidAt            DateTime?
+  paymentMethod     String?
+  paymentRef        String?
+  creditNoteNumber  String?       @unique
+  cancelledAt       DateTime?
+  cancelReason      String?
+  createdAt         DateTime      @default(now())
+  merchant          Merchant      @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+
+  @@unique([merchantId, period])
+  @@index([status, dueAt])
+}
+
+/// Gapless numbering: one row per series ("FAC-2026", "AV-2026"), incremented inside the invoice transaction.
+model DocumentCounter {
+  series String @id
+  last   Int    @default(0)
 }

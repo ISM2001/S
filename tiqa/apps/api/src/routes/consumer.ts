@@ -61,6 +61,7 @@ export async function consumerRoutes(app: FastifyInstance, { deps, network }: { 
 
     const { count } = await prisma.otpChallenge.updateMany({ where: { id: ch.id, consumedAt: null }, data: { consumedAt: new Date() } });
     if (count !== 1) throw unauthorized("OTP_INVALID");
+    await network.migrateToCurrentKey([phone]); // so the summary also shows records stored under a previous key
     await startConsumerSession(deps, reply, hash);
     await audit(deps, { actor: { type: "consumer", id: null }, action: "consumer_verify", phoneHash: hash });
     return { ok: true };

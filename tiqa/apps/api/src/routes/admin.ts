@@ -1,7 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { Deps } from "../deps";
-import { notFound } from "../lib/errors";
+import { badRequest, notFound, unauthorized } from "../lib/errors";
+import { decrypt, encrypt } from "../lib/crypto";
+import { newTotpSecret, otpauthUri, verifyTotp } from "../lib/totp";
+import { hit } from "../services/rate-limit";
 import { validate } from "../lib/validate";
 import { runTrustJob } from "../jobs/trust";
 import { audit } from "../services/audit";
@@ -14,8 +17,34 @@ export async function adminRoutes(app: FastifyInstance, { deps, network }: { dep
   const { prisma } = deps;
 
   app.get("/admin/me", async (req) => {
-    const s = await requireStaff(deps, req);
-    return { email: s.email };
+    const s = await requireStaff(deps, req, { allowNoMfa: true });
+    const mfa = !deps.env.STAFF_MFA_REQUIRED || s.mfaVerified ? "ok" : s.mfaEnabled ? "required" : "setup_required";
+    return { email: s.email, mfa };
+  });
+
+  /** Start TOTP enrolment (only while not yet enabled). Returns the secret + otpauth:// URI for the QR code. */
+  app.post("/admin/mfa/setup", async (req) => {
+    const s = await requireStaff(deps, req, { allowNoMfa: true });
+    if (s.mfaEnabled) throw badRequest("MFA_ALREADY_ENABLED");
+    const secret = newTotpSecret();
+    await prisma.user.update({ where: { id: s.userId }, data: { totpSecretEnc: encrypt(secret, deps.env.INTEGRATION_ENC_KEY) } });
+    return { secret, otpauth_uri: otpauthUri(secret, s.email) };
+  });
+
+  /** Verify a TOTP code: enables 2FA on first success, marks this session as verified. Codes can't be replayed. */
+  app.post("/admin/mfa/verify", async (req) => {
+    const s = await requireStaff(deps, req, { allowNoMfa: true });
+    await hit(deps.redis, `mfa:${s.userId}`, 10, 900);
+    const { code } = validate(z.object({ code: z.string().regex(/^\d{6}$/) }), req.body);
+    if (!s.totpSecretEnc) throw badRequest("MFA_NOT_SET_UP");
+    const step = verifyTotp(decrypt(s.totpSecretEnc, deps.env.INTEGRATION_ENC_KEY), code);
+    if (step === null) throw unauthorized("MFA_CODE_INVALID");
+    const fresh = await deps.redis.set(`tiqa:mfa-step:${s.userId}:${step}`, "1", "EX", 120, "NX");
+    if (fresh !== "OK") throw unauthorized("MFA_CODE_INVALID");
+    if (!s.mfaEnabled) await prisma.user.update({ where: { id: s.userId }, data: { totpEnabledAt: new Date() } });
+    await prisma.session.update({ where: { idHash: s.sessionIdHash }, data: { mfaAt: new Date() } });
+    await audit(deps, { actor: { type: "staff", id: s.userId }, action: s.mfaEnabled ? "mfa_verified" : "mfa_enabled" });
+    return { ok: true };
   });
 
   app.get("/admin/overview", async (req) => {

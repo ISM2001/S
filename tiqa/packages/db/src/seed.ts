@@ -53,6 +53,8 @@ async function main() {
   // ── Clean previous seed ───────────────────────────────────────────────
   const old = await prisma.merchant.findMany({ where: { isSeed: true }, select: { id: true } });
   await prisma.auditLog.deleteMany({ where: { merchantId: { in: old.map((m) => m.id) } } });
+  // Invoices protect merchants from deletion (accounting records); seed invoices are fake, so remove them first.
+  await prisma.invoice.deleteMany({ where: { merchantId: { in: old.map((m) => m.id) } } });
   await prisma.merchant.deleteMany({ where: { isSeed: true } });
   await prisma.dataSubjectRequest.deleteMany({ where: { items: { some: { merchantId: { in: old.map((m) => m.id) } } } } });
   await prisma.user.deleteMany({ where: { email: { endsWith: "@tiqa.test" } } });
@@ -70,6 +72,7 @@ async function main() {
           termsVersion: "2026-11-draft",
           createdAt: new Date(now - (120 - i * 10) * DAY),
           subscription: { create: { planId: i === 0 ? starter.id : free.id } },
+          ...(i === 0 ? { billingLegalName: "Demo Store SARL (fictive)", billingIce: "000000000000000", billingAddress: "Bd Exemple 1", billingCity: "Casablanca", billingEmail: "billing@tiqa.test" } : {}),
         },
       }),
     );
@@ -203,6 +206,14 @@ async function main() {
   }
   await prisma.lookup.createMany({ data: lookups });
 
+  // Last month's usage for the demo store (Starter: 2,000 included) → the worker issues an invoice with overage.
+  const prev = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
+  await prisma.usageMonthly.upsert({
+    where: { merchantId_period: { merchantId: demo.id, period: prev } },
+    create: { merchantId: demo.id, period: prev, lookups: 2350, outcomesSubmitted: 1900 },
+    update: { lookups: 2350 },
+  });
+
   const counts = await prisma.outcome.groupBy({ by: ["outcome"], where: { merchant: { isSeed: true } }, _count: { _all: true } });
   console.log("\n✅ Seed complete (fake numbers only)\n");
   console.log("  Outcomes:", Object.fromEntries(counts.map((c) => [c.outcome, c._count._all])));
@@ -211,7 +222,8 @@ async function main() {
   console.log(`  Admin (staff):    ${STAFF_EMAIL} / ${STAFF_PASSWORD}`);
   console.log(`  Dev API key:      ${DEMO_API_KEY}`);
   console.log("\n  Try: 0600000001 (HIGH) · 0600000002 (LOW) · 0600000003 (no history) · 0600000004 (disputed → frozen)");
-  console.log("  Trust weights & anomaly flags are computed by the worker (`pnpm dev` starts it).\n");
+  console.log("  Trust weights, anomaly flags and last month's invoice are produced by the worker (`pnpm dev` starts it).");
+  console.log("  Admin: the first login asks you to set up two-factor authentication (any authenticator app).\n");
 }
 
 main()

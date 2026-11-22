@@ -105,6 +105,7 @@ export async function scorePlatformOrder(
     return { scored: true, response };
   } catch (e) {
     if (e instanceof ApiError && e.statusCode === 429) return { scored: false, reason: "rate_limited" };
+    if (e instanceof ApiError && e.statusCode === 402) return { scored: false, reason: "quota_exceeded" };
     throw e;
   }
 }

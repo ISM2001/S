@@ -37,7 +37,8 @@
     "history": "السجل",
     "apiKeys": "مفاتيح API",
     "team": "الفريق",
-    "integrations": "الربط"
+    "integrations": "الربط",
+    "billing": "الفوترة"
   },
   "bands": {
     "low": "خطر ضعيف",
@@ -201,7 +202,14 @@
     "WEBHOOK_URL_NOT_PUBLIC": "هاد العنوان ما متاحش للعموم.",
     "TOO_MANY_ENDPOINTS": "5 روابط كحد أقصى.",
     "SHOPIFY_SHOP_INVALID": "اسم متجر Shopify غير صالح.",
-    "SHOP_LINKED_TO_ANOTHER_ACCOUNT": "هاد المتجر مربوط بحساب Tiqa آخر."
+    "SHOP_LINKED_TO_ANOTHER_ACCOUNT": "هاد المتجر مربوط بحساب Tiqa آخر.",
+    "QUOTA_EXCEEDED": "وصلتي للحصة ديال العرض المجاني هاد الشهر. دوز لعرض مؤدى عنه باش تكمل.",
+    "BILLING_PROFILE_REQUIRED": "عمر أولا معلومات الفوترة.",
+    "MFA_CODE_INVALID": "الرمز غالط ولا تستعمل.",
+    "MFA_REQUIRED": "التحقق بخطوتين ضروري.",
+    "MFA_SETUP_REQUIRED": "عد أولا التحقق بخطوتين.",
+    "BAD_ORIGIN": "الطلب مرفوض.",
+    "PERIOD_NOT_CLOSED": "هاد الشهر باقي ما سالاش."
   },
   "consumer": {
     "title": "المعطيات ديالك فشبكة Tiqa",
@@ -279,7 +287,8 @@
     "nav": {
       "requests": "الطلبات",
       "merchants": "التجار",
-      "flags": "التنبيهات"
+      "flags": "التنبيهات",
+      "invoices": "الفواتير"
     },
     "overview": "{requests} طلبات مفتوحة · {flags} تنبيهات مفتوحة · {merchants} تاجر ({low} ثقة ضعيفة)",
     "open": "مفتوحة",
@@ -332,7 +341,25 @@
       "merchant_manual": "إدخال المتجر"
     },
     "dismissedTab": "متجاهلة",
-    "actionedTab": "معالجة"
+    "actionedTab": "معالجة",
+    "mfa": {
+      "title": "التحقق بخطوتين",
+      "setupHelp": "سكاني هاد QR بتطبيق المصادقة (Google Authenticator، Microsoft Authenticator…)، ومن بعد دخل الرمز ديال 6 أرقام.",
+      "secret": "المفتاح (إدخال يدوي)",
+      "code": "رمز من 6 أرقام",
+      "verify": "تحقق",
+      "requiredHelp": "دخل الرمز من تطبيق المصادقة ديالك.",
+      "start": "إعداد"
+    },
+    "invoices": {
+      "runBilling": "إصدار فواتير الشهر الفايت",
+      "markPaid": "تأشير كمؤداة",
+      "reference": "مرجع الأداء",
+      "cancel": "إلغاء (فاتورة دائنة)",
+      "cancelReason": "سبب الإلغاء",
+      "overdue": "متأخرة",
+      "result": "{issued} تصدرات، {skipped} تجاهلناها"
+    }
   },
   "integrations": {
     "title": "الربط مع الأدوات",
@@ -388,5 +415,58 @@
       "subscriptionError": "الاشتراك فالطلبيات فشل: عاود ربط المتجر.",
       "notConfigured": "تطبيق YouCan باقي ما مفعلش فهاد الخادم."
     }
+  },
+  "billing": {
+    "title": "الفوترة",
+    "plan": "العرض ديالك",
+    "usage": "هاد الشهر ({period})",
+    "lookupsUsed": "{used} عملية تحقق / {included} مشمولة",
+    "perMonth": "{price} درهم بدون ضريبة / الشهر",
+    "free": "مجاني",
+    "included": "{n} عملية تحقق مشمولة",
+    "overage": "من بعد {price} درهم بدون ضريبة / عملية",
+    "noOverage": "كيتوقف من بعد الحصة",
+    "current": "العرض الحالي",
+    "choose": "اختار",
+    "estimate": "تقدير الشهر (مع الضريبة)",
+    "vat": "الضريبة على القيمة المضافة {rate}%",
+    "profile": "معلومات الفوترة",
+    "legalName": "الاسم القانوني للشركة",
+    "ice": "ICE (15 رقم)",
+    "address": "العنوان",
+    "city": "المدينة",
+    "email": "إيميل الفوترة",
+    "profileHelp": "ضرورية للعروض المؤدى عنها: هاد المعلومات كتبان فالفواتير ديالك.",
+    "invoices": "الفواتير",
+    "noInvoices": "ما كاين حتى فاتورة.",
+    "number": "الرقم",
+    "period": "الفترة",
+    "amount": "المبلغ مع الضريبة",
+    "status": "الحالة",
+    "view": "شوف",
+    "statuses": {
+      "issued": "للأداء",
+      "paid": "مؤداة",
+      "cancelled": "ملغاة (فاتورة دائنة)",
+      "overdue": "متأخرة"
+    },
+    "payment": "الأداء بتحويل بنكي",
+    "paymentHelp": "كتب رقم الفاتورة كمرجع ديال التحويل.",
+    "bank": "البنك",
+    "rib": "RIB",
+    "printTitle": "فاتورة",
+    "seller": "المصدر",
+    "buyer": "الزبون",
+    "issued": "تاريخ الإصدار",
+    "due": "تاريخ الاستحقاق",
+    "designation": "البيان",
+    "qty": "الكمية",
+    "unit": "الثمن بدون ضريبة",
+    "total": "المجموع بدون ضريبة",
+    "subtotal": "المجموع بدون ضريبة",
+    "totalTtc": "المجموع مع الضريبة",
+    "print": "طباعة / PDF",
+    "creditNote": "ملغاة بالفاتورة الدائنة {n}",
+    "draftNotice": "البيانات القانونية للمصدر خاصها تتكمل قبل الإطلاق."
   }
 }

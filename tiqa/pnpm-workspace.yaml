@@ -9,3 +9,7 @@ onlyBuiltDependencies:
   - sharp
   - "@node-rs/argon2"
   - "@tailwindcss/oxide"
+# Security: patched versions of transitive dependencies of Prisma's config tooling (pnpm audit, 2026-11-22).
+overrides:
+  deepmerge-ts: "^8.0.0"
+  effect: "^3.22.1"

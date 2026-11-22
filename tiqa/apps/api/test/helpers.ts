@@ -6,6 +6,7 @@ import { afterAll, beforeEach } from "vitest";
 import { buildApp } from "../src/app";
 import type { Deps } from "../src/deps";
 import { loadEnv } from "../src/env";
+import { base32Decode, hotp, totpStep } from "../src/lib/totp";
 import type { Mail } from "../src/lib/mailer";
 import { TEST_DATABASE_URL, TEST_REDIS_URL } from "./env";
 
@@ -45,7 +46,7 @@ export function setupTestApp(envOverrides: Record<string, string> = {}): TestCtx
   beforeEach(async () => {
     if (!ctx.app) ctx.app = await buildApp(deps, { logger: false });
     await prisma.$executeRawUnsafe(
-      `TRUNCATE "WebhookDelivery","WebhookEndpoint","Integration","CsvMapping","RequestItem","DataSubjectRequest","OtpChallenge","ConsumerSession","AnomalyFlag","Invite","Outcome","Lookup","AuditLog","ApiKey","Session","MagicLink","Membership","User","UsageMonthly","Subscription","CsvImport","Merchant","Plan" RESTART IDENTITY CASCADE`,
+      `TRUNCATE "DocumentCounter","Invoice","WebhookDelivery","WebhookEndpoint","Integration","CsvMapping","RequestItem","DataSubjectRequest","OtpChallenge","ConsumerSession","AnomalyFlag","Invite","Outcome","Lookup","AuditLog","ApiKey","Session","MagicLink","Membership","User","UsageMonthly","Subscription","CsvImport","Merchant","Plan" RESTART IDENTITY CASCADE`,
     );
     await redis.flushdb();
     mails.length = 0;
@@ -86,10 +87,14 @@ export function cookieFrom(setCookie: string | string[] | undefined): string {
 
 export const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
 
-/** Make a user staff and return a session cookie for them. */
+/** Make a user staff, enrol TOTP 2FA through the real endpoints, and return a fully verified session cookie. */
 export async function staffLogin(ctx: TestCtx, email = "staff@tiqa.test") {
   const { cookie } = await signup(ctx, email, "Tiqa Staff Store");
   await ctx.prisma.user.update({ where: { email }, data: { isStaff: true } });
+  const setup = await ctx.app.inject({ method: "POST", url: "/admin/mfa/setup", headers: { cookie } });
+  const code = hotp(base32Decode(setup.json().secret), totpStep());
+  const v = await ctx.app.inject({ method: "POST", url: "/admin/mfa/verify", headers: { cookie }, payload: { code } });
+  if (v.statusCode !== 200) throw new Error(`mfa verify failed: ${v.body}`);
   return { cookie };
 }
 

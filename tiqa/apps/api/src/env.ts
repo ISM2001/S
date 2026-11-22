@@ -27,9 +27,23 @@ const Env = z.object({
   YOUCAN_CLIENT_ID: z.string().optional().default(""),
   YOUCAN_CLIENT_SECRET: z.string().optional().default(""),
   YOUCAN_SCOPES: z.string().default("read-orders,edit-rest-hooks"),
+  // ── Billing (seller identity printed on invoices; placeholders until the company exists) ──
+  VAT_RATE_BP: z.coerce.number().int().min(0).max(10_000).default(2000),
+  INVOICE_DUE_DAYS: z.coerce.number().int().min(0).max(90).default(15),
+  BILLING_SELLER_NAME: z.string().default("[Raison sociale Tiqa SARL, à compléter]"),
+  BILLING_SELLER_ICE: z.string().default("[ICE à compléter]"),
+  BILLING_SELLER_RC: z.string().default("[RC à compléter]"),
+  BILLING_SELLER_IF: z.string().default("[IF à compléter]"),
+  BILLING_SELLER_ADDRESS: z.string().default("[Adresse à compléter]"),
+  BILLING_BANK: z.string().default("[Banque à compléter]"),
+  BILLING_RIB: z.string().default("[RIB à compléter]"),
+  /** Staff accounts must use TOTP two-factor authentication. */
+  STAFF_MFA_REQUIRED: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
+  /** Previous phone-hash peppers kept during a rotation: "1:oldpepper,2:otherpepper". */
+  PHONE_HASH_PEPPERS_OLD: z.string().optional().default(""),
 });
 
-export type Env = z.infer<typeof Env>;
+export type Env = z.infer<typeof Env> & { API_PUBLIC_URL: string };
 
 export function loadEnv(source: Record<string, string | undefined> = process.env): Env {
   const parsed = Env.safeParse(source);
@@ -45,5 +59,5 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
   }
   const env = parsed.data;
   if (!env.API_PUBLIC_URL) env.API_PUBLIC_URL = `${env.WEB_URL.replace(/\/$/, "")}/api`;
-  return env as typeof env & { API_PUBLIC_URL: string };
+  return env as Env;
 }

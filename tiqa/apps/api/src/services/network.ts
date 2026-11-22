@@ -15,10 +15,50 @@ type CachedOutcome = [merchantId: string, outcome: ScoringOutcome["outcome"], so
 export class Network {
   private trustCache = new Map<string, { t: number; at: number }>();
 
-  constructor(private deps: Deps) {}
+  /** Previous peppers kept during a key rotation (PHONE_HASH_PEPPERS_OLD="1:old,2:older"). */
+  private oldPeppers: string[];
+
+  constructor(private deps: Deps) {
+    this.oldPeppers = deps.env.PHONE_HASH_PEPPERS_OLD.split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .map((x) => x.slice(x.indexOf(":") + 1))
+      .filter((p) => p.length >= 32 && p !== deps.env.PHONE_HASH_PEPPER);
+  }
 
   hash(e164: string): Bytes {
     return phoneHash(e164, this.deps.env.PHONE_HASH_PEPPER);
+  }
+
+  /**
+   * Key rotation without raw numbers: whenever we see a phone in clear (lookup, outcome, consumer OTP),
+   * records still stored under an OLD pepper are re-keyed to the current one. Records never seen again
+   * expire through retention, after which the old pepper can be removed from the config.
+   */
+  async migrateToCurrentKey(e164s: string[]): Promise<number> {
+    if (!this.oldPeppers.length || !e164s.length) return 0;
+    const olds: string[] = [];
+    const news: string[] = [];
+    for (const e of new Set(e164s)) {
+      const cur = this.hash(e).toString("hex");
+      for (const p of this.oldPeppers) {
+        olds.push(phoneHash(e, p).toString("hex"));
+        news.push(cur);
+      }
+    }
+    const v = this.deps.env.PHONE_HASH_KEY_VERSION;
+    const { prisma } = this.deps;
+    const moved = await prisma.$executeRaw`
+      UPDATE "Outcome" o SET "phoneHash" = decode(m.n, 'hex'), "hashKeyVersion" = ${v}
+      FROM unnest(${olds}::text[], ${news}::text[]) AS m(o, n) WHERE o."phoneHash" = decode(m.o, 'hex')`;
+    await prisma.$executeRaw`
+      UPDATE "Lookup" l SET "phoneHash" = decode(m.n, 'hex')
+      FROM unnest(${olds}::text[], ${news}::text[]) AS m(o, n) WHERE l."phoneHash" = decode(m.o, 'hex')`;
+    await prisma.$executeRaw`
+      UPDATE "DataSubjectRequest" r SET "phoneHash" = decode(m.n, 'hex')
+      FROM unnest(${olds}::text[], ${news}::text[]) AS m(o, n) WHERE r."phoneHash" = decode(m.o, 'hex')`;
+    if (moved) await this.invalidate([...new Set(news)].map((h) => Buffer.from(h, "hex")));
+    return moved;
   }
 
   private key(hash: Bytes) {
